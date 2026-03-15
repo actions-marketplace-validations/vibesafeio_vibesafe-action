@@ -1,96 +1,208 @@
-# VibeSafe 🛡️
+# VibeSafe Security Scan · GitHub Action
 
-바이브 코더(AI 기반 개발자)를 위한 보안 스캐닝 서비스.
-개발 지식 없이도 OWASP Top 10, 도메인별 규제(PCI DSS, HIPAA, GDPR 등)를 자동으로 검사하고 원클릭 수정까지 제공한다.
+> PR마다 자동으로 보안을 검사하고, 결과를 코멘트로 달아줍니다.
 
-## 아키텍처: WAT 프레임워크
+바이브 코딩(AI 생성 코드)에서 자주 나타나는 SQL Injection, XSS, 하드코딩된 API 키 등을 PR 단계에서 잡아냅니다.
 
-```
-Workflows (workflows/*.md)   — 각 작업의 SOP 지침서
-    ↓
-Agents (Claude Code)         — 워크플로우를 읽고 도구를 순서대로 실행
-    ↓
-Tools (tools/**/*.py)        — 결정론적 실행 스크립트
-```
+---
 
-## 프로젝트 구조
+## 실제 PR 코멘트 예시
 
 ```
-vibe_security/
-├── .env.example             # 환경 변수 예시 (.env로 복사 후 값 채우기)
-├── requirements.txt         # Python 의존성
-├── AGENT_INSTRUCTIONS.md    # 에이전트 운영 지침
-├── workflows/               # SOP 마크다운
-│   ├── scan_submission.md
-│   ├── domain_classification.md
-│   ├── vulnerability_triage.md
-│   ├── auto_remediation.md
-│   ├── report_generation.md
-│   ├── deployment.md
-│   └── error_log.md
-├── tools/
-│   ├── infra/
-│   │   ├── file_extractor.py      # 업로드 파일 압축 해제 및 검증
-│   │   ├── sandbox_manager.py     # Docker 샌드박스 생성/폐기
-│   │   └── db_client.py           # PostgreSQL/Redis 클라이언트
-│   ├── scanner/
-│   │   ├── sast_runner.py         # Semgrep 정적 분석
-│   │   ├── dast_runner.py         # OWASP ZAP 동적 분석
-│   │   ├── sca_runner.py          # 의존성 취약점 스캔
-│   │   ├── secret_scanner.py      # 하드코딩 시크릿 탐지
-│   │   └── domain_rule_engine.py  # 도메인 분류 + 규칙셋 매핑
-│   ├── remediation/
-│   │   ├── auto_fix_generator.py  # AI 기반 수정 코드 생성
-│   │   ├── patch_applier.py       # 자동 패치 적용
-│   │   └── fix_validator.py       # 수정 후 재스캔 검증
-│   └── report/
-│       ├── score_calculator.py    # 보안 점수 산출 (0-100)
-│       ├── compliance_checker.py  # 규제 준수 판정
-│       └── pdf_generator.py       # HTML/PDF/JSON 리포트 생성
-└── .tmp/                          # 스캔 중간 결과 (재생성 가능)
+🔐 VibeSafe 보안 스캔 결과
+
+🟢 100/100 (등급 A) ✅ Certified
+
+> 취약점 미발견
+
+| 심각도      | 건수 |
+|-------------|------|
+| 🔴 Critical |  0   |
+| 🟠 High     |  0   |
+| 🟡 Medium   |  0   |
+| 🟢 Low      |  0   |
+
+도메인: `platform` · 총 0건
 ```
 
-## 빠른 시작
+---
 
-```bash
-# 1. 의존성 설치
-pip install -r requirements.txt
+## 설치 (30초)
 
-# 2. 환경 변수 설정
-cp .env.example .env
-# .env 파일에 실제 값 입력
+`.github/workflows/vibesafe-scan.yml` 파일 하나 추가하면 끝입니다.
 
-# 3. 스캔 실행 예시 (스캔 ID = abc123, 도메인 = ecommerce)
-SCAN_ID=abc123
-DOMAIN=ecommerce
-SOURCE=.tmp/scan_abc123/
+```yaml
+name: VibeSafe Security Scan
 
-python tools/infra/file_extractor.py --input my_project.zip --output $SOURCE
-python tools/scanner/sast_runner.py --detect-stack --path $SOURCE
-python tools/scanner/domain_rule_engine.py --domain $DOMAIN --path $SOURCE
-python tools/scanner/sast_runner.py --path $SOURCE --output $SOURCE/sast.sarif
-python tools/scanner/sca_runner.py --path $SOURCE --output $SOURCE/sca.json
-python tools/scanner/secret_scanner.py --path $SOURCE --output $SOURCE/secrets.json
-python tools/report/score_calculator.py --domain $DOMAIN \
-    --sast-result $SOURCE/sast.sarif \
-    --sca-result $SOURCE/sca.json \
-    --secret-result $SOURCE/secrets.json
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  vibesafe:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run VibeSafe scan
+        id: vibesafe
+        uses: vibesafeio/vibesafe-action@master
+        with:
+          domain: auto
+
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        env:
+          VIBESAFE_SCORE: ${{ steps.vibesafe.outputs.score }}
+          VIBESAFE_GRADE: ${{ steps.vibesafe.outputs.grade }}
+          VIBESAFE_DOMAIN: ${{ steps.vibesafe.outputs.domain }}
+          VIBESAFE_CERTIFIED: ${{ steps.vibesafe.outputs.certified }}
+          VIBESAFE_CRITICAL: ${{ steps.vibesafe.outputs.critical }}
+          VIBESAFE_HIGH: ${{ steps.vibesafe.outputs.high }}
+          VIBESAFE_MEDIUM: ${{ steps.vibesafe.outputs.medium }}
+          VIBESAFE_LOW: ${{ steps.vibesafe.outputs.low }}
+          VIBESAFE_TOTAL: ${{ steps.vibesafe.outputs.total }}
+          VIBESAFE_BLOCK_REASON: ${{ steps.vibesafe.outputs.certified_block_reason }}
+        with:
+          script: |
+            const points    = parseInt(process.env.VIBESAFE_SCORE, 10);
+            const grade     = process.env.VIBESAFE_GRADE;
+            const domain    = process.env.VIBESAFE_DOMAIN;
+            const certified = process.env.VIBESAFE_CERTIFIED === 'true';
+            const critical  = parseInt(process.env.VIBESAFE_CRITICAL, 10);
+            const high      = parseInt(process.env.VIBESAFE_HIGH, 10);
+            const medium    = parseInt(process.env.VIBESAFE_MEDIUM, 10);
+            const low       = parseInt(process.env.VIBESAFE_LOW, 10);
+            const total     = parseInt(process.env.VIBESAFE_TOTAL, 10);
+            const blockReason = process.env.VIBESAFE_BLOCK_REASON || '';
+            const gradeEmoji = {A:'🟢',B:'🟡',C:'🟠',D:'🔴',F:'🔴'}[grade]||'⚪';
+            const certBadge = certified ? ' ✅ **Certified**' : '';
+            const certBlock = blockReason ? `\n> 인증 불가: ${blockReason}` : '';
+            let summary = '';
+            if (critical > 0)    summary = `Critical 취약점 ${critical}개 발견 — 즉시 수정 필요`;
+            else if (high > 0)   summary = `High 취약점 ${high}개 발견 — 머지 전 수정 권장`;
+            else if (medium > 0) summary = `Medium 취약점 ${medium}개 발견`;
+            else if (low > 0)    summary = `Low 취약점 ${low}개`;
+            else                 summary = `취약점 미발견`;
+            const body = [
+              `## 🔐 VibeSafe 보안 스캔 결과`,``,
+              `${gradeEmoji} **${points}/100** (등급 ${grade})${certBadge}`,
+              certBlock,``,`> ${summary}`,``,
+              `| 심각도 | 건수 |`,`|--------|------|`,
+              `| 🔴 Critical | ${critical} |`,`| 🟠 High | ${high} |`,
+              `| 🟡 Medium | ${medium} |`,`| 🟢 Low | ${low} |`,``,
+              `도메인: \`${domain}\` · 총 ${total}건`,``,
+              `<sub>Powered by [VibeSafe](https://vibesafe.dev)</sub>`,
+            ].join('\n');
+            const {data:comments} = await github.rest.issues.listComments({
+              owner:context.repo.owner, repo:context.repo.repo, issue_number:context.issue.number
+            });
+            const existing = comments.find(c =>
+              c.user.login==='github-actions[bot]' && c.body.includes('VibeSafe 보안 스캔 결과')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner:context.repo.owner, repo:context.repo.repo, comment_id:existing.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner:context.repo.owner, repo:context.repo.repo, issue_number:context.issue.number, body
+              });
+            }
 ```
 
-## 지원 도메인
+---
 
-| 도메인 | 적용 규제 |
-|--------|----------|
-| ecommerce (이커머스) | PCI DSS, GDPR, 전자상거래법 |
-| game (게임) | COPPA, GDPR |
-| platform (플랫폼/SaaS) | SOC2, GDPR, CCPA |
-| healthcare (헬스케어) | HIPAA, 개인정보보호법 |
-| fintech (핀테크) | PCI DSS, 전자금융거래법 |
-| education (교육) | FERPA, COPPA |
+## 무엇을 검사하나요
 
-## 보안 원칙
+| 항목 | 내용 |
+|------|------|
+| **SAST** | SQL Injection, XSS, SSRF, IDOR, Command Injection 등 OWASP Top 10 |
+| **시크릿 탐지** | API 키, GitHub 토큰, Stripe 키, AWS 자격증명 하드코딩 |
+| **도메인별 규칙** | 서비스 유형에 맞는 보안 규칙 자동 선택 |
 
-- 사용자 소스코드는 샌드박스 내에서만 실행
-- 모든 API 키/시크릿은 `.env`에만 저장
-- 스캔 결과는 S3 서버사이드 암호화(AES-256) 저장
-- 사용자 코드는 학습 데이터로 수집하지 않음
+지원 언어: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
+
+---
+
+## 도메인 옵션
+
+```yaml
+domain: auto        # 코드를 분석해서 자동 분류 (기본값)
+domain: ecommerce   # 결제/주문 — PCI DSS 룰 강화
+domain: fintech     # 계좌/송금 — 전자금융거래법, AML
+domain: healthcare  # 환자정보 — HIPAA, 개인정보보호법
+domain: platform    # SaaS/멀티테넌트 — JWT, RBAC
+domain: game        # 게임서버 — WebSocket, 클라이언트 조작
+domain: education   # 학생정보 — FERPA, COPPA
+```
+
+---
+
+## 점수 기준
+
+| 등급 | 점수 | 의미 |
+|------|------|------|
+| 🟢 **A** + ✅ Certified | 85 ~ 100 | Critical · High 0개 |
+| 🟢 **A** | 85 ~ 100 | 양호 |
+| 🟡 **B** | 70 ~ 84 | 경미한 취약점 |
+| 🟠 **C** | 50 ~ 69 | Medium 취약점 다수 |
+| 🔴 **D / F** | 0 ~ 49 | Critical · High 존재 |
+
+**✅ Certified** 배지는 Critical 0 + High 0 + 점수 85 이상일 때 발급됩니다.
+
+---
+
+## Outputs
+
+다른 step에서 결과를 활용할 수 있습니다.
+
+```yaml
+- run: echo "Score: ${{ steps.vibesafe.outputs.score }}"
+```
+
+| output | 설명 | 예시 |
+|--------|------|------|
+| `score` | 보안 점수 | `82` |
+| `grade` | 등급 | `B` |
+| `domain` | 감지된 도메인 | `fintech` |
+| `certified` | Certified 여부 | `true` |
+| `critical` | Critical 취약점 수 | `0` |
+| `high` | High 취약점 수 | `2` |
+| `medium` | Medium 취약점 수 | `5` |
+| `low` | Low 취약점 수 | `3` |
+| `total` | 전체 취약점 수 | `10` |
+| `certified_block_reason` | Certified 미발급 사유 | `high >= 1` |
+
+---
+
+## 머지 차단 설정 (선택)
+
+Critical 취약점이 있으면 머지를 막으려면:
+
+`Settings → Branches → Branch protection rules → Require status checks`
+→ **`VibeSafe Security Scan / Security Scan`** 추가
+
+---
+
+## FAQ
+
+**코드가 외부로 나가나요?**
+아니요. 모든 스캔은 GitHub Actions runner 안에서 실행됩니다. 코드가 VibeSafe 서버로 전송되지 않습니다.
+
+**비용이 드나요?**
+GitHub Actions 실행 시간만 소비합니다. 스캔 1회 약 20초. Public 레포는 무제한 무료입니다.
+
+**어떤 언어를 지원하나요?**
+Semgrep이 지원하는 모든 언어 — JavaScript/TypeScript, Python, Java, Go, Ruby, PHP, Kotlin.
+
+---
+
+<sub>Powered by [VibeSafe](https://vibesafe.dev) · Built with [Semgrep](https://semgrep.dev)</sub>
