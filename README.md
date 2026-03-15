@@ -8,22 +8,13 @@
 
 ## 실제 PR 코멘트 예시
 
-```
-🔐 VibeSafe 보안 스캔 결과
+**취약점 없음 — A등급 Certified**
 
-🟢 100/100 (등급 A) ✅ Certified
+![Clean result](./docs/screenshot-clean.png)
 
-> 취약점 미발견
+**취약점 발견 — F등급**
 
-| 심각도      | 건수 |
-|-------------|------|
-| 🔴 Critical |  0   |
-| 🟠 High     |  0   |
-| 🟡 Medium   |  0   |
-| 🟢 Low      |  0   |
-
-도메인: `platform` · 총 0건
-```
+![Vulnerable result](./docs/screenshot-vuln.png)
 
 ---
 
@@ -53,7 +44,7 @@ jobs:
 
       - name: Run VibeSafe scan
         id: vibesafe
-        uses: vibesafeio/vibesafe-action@master
+        uses: vibesafeio/vibesafe-action@v0
         with:
           domain: auto
 
