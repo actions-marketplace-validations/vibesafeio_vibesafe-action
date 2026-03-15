@@ -50,7 +50,7 @@ outputs:
 
 runs:
   using: "docker"
-  image: "docker://ghcr.io/vibesafeio/vibesafe-action:v0"
+  image: "docker://ghcr.io/vibesafeio/vibesafe-action:latest"
   env:
     INPUT_PATH: ${{ inputs.path }}
     INPUT_DOMAIN: ${{ inputs.domain }}
