@@ -1,0 +1,228 @@
+// prisma/schema.prisma
+// db_client.py(psycopg2) snake_case 컬럼명과 @map()으로 완전 호환
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── NextAuth.js 필수 테이블 ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime? @map("email_verified")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  scans    Scan[]
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refreshToken      String? @map("refresh_token") @db.Text
+  accessToken       String? @map("access_token") @db.Text
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
+  scope             String?
+  idToken           String? @map("id_token") @db.Text
+  sessionState      String? @map("session_state")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─── 스캔 ─────────────────────────────────────────────────────────────────
+// db_client.py: create_scan(), update_scan_status() 컬럼명과 1:1 매핑
+
+model Scan {
+  // Python에서 UUID v4로 생성하여 전달
+  id         String   @id
+  userId     String   @map("user_id")
+  domainType String   @map("domain_type") // ecommerce|game|platform|healthcare|fintech|education
+  scanDepth  String   @map("scan_depth")  // quick|standard|deep
+
+  // String 타입 사용 → Python psycopg2와 enum 충돌 없음
+  // 값: PENDING | QUEUED | RUNNING | COMPLETED | FAILED
+  status String @default("PENDING")
+
+  // S3 참조
+  s3SourceKey String? @map("s3_source_key") // uploads/{scan_id}/source.zip
+
+  // 오류
+  errorMessage String? @map("error_message") @db.Text
+
+  // 타임스탬프
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
+
+  user            User           @relation(fields: [userId], references: [id])
+  result          ScanResult?
+  vulnerabilities Vulnerability[]
+  artifacts       ScanArtifact[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("scans")
+}
+
+// ─── 스캔 결과 요약 ───────────────────────────────────────────────────────
+// db_client.py: save_scan_results() 호환
+
+model ScanResult {
+  scanId        String   @id @map("scan_id")
+  score         Int      // 0-100
+  grade         String   // A|B|C|D|F
+  criticalCount Int      @default(0) @map("critical_count")
+  highCount     Int      @default(0) @map("high_count")
+  mediumCount   Int      @default(0) @map("medium_count")
+  lowCount      Int      @default(0) @map("low_count")
+  rawResults    Json     @map("raw_results") // score_calculator.py 전체 출력
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@map("scan_results")
+}
+
+// ─── 취약점 ──────────────────────────────────────────────────────────────
+// db_client.py: save_vulnerabilities(), suppress_vulnerability() 호환
+
+model Vulnerability {
+  id     String @id @default(cuid())
+  scanId String @map("scan_id")
+  vulnId String @unique @map("vuln_id") // "{scan_id}-{index}"
+
+  type     String  // sql_injection|xss|hardcoded_secret|idor|ssrf|...
+  severity String  // critical|high|medium|low|info
+  filePath String? @map("file_path")
+  lineNumber Int?  @map("line_number")
+
+  descriptionKo     String? @map("description_ko") @db.Text
+  descriptionSimple String? @map("description_simple") @db.Text // 비개발자용 설명
+  patch             String? @db.Text                             // unified diff 패치
+  aiPrompt          String? @map("ai_prompt") @db.Text          // 바이브 코딩 도구용 프롬프트
+
+  cvssScore    Float? @map("cvss_score")
+  domainWeight Float? @map("domain_weight")
+  finalScore   Float? @map("final_score")
+
+  // 값: open | suppressed | fixed
+  status String @default("open")
+
+  // 오탐 신고 (db_client.py: suppress_vulnerability)
+  suppressionReason String?   @map("suppression_reason") @db.Text
+  suppressedBy      String?   @map("suppressed_by")
+  suppressedAt      DateTime? @map("suppressed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([severity])
+  @@index([status])
+  @@map("vulnerabilities")
+}
+
+// ─── 스캔 아티팩트 (S3 파일 참조) ────────────────────────────────────────
+// Python 워커가 INSERT, Next.js API가 SELECT해 presigned download URL 생성
+
+model ScanArtifact {
+  id           String @id @default(cuid())
+  scanId       String @map("scan_id")
+
+  // sast_sarif | sca_json | secrets_json | dast_json | report_pdf | source_zip
+  artifactType String @map("artifact_type")
+  s3Key        String @map("s3_key")    // artifacts/{scan_id}/sast.sarif
+  s3Bucket     String @map("s3_bucket")
+  fileSizeBytes Int?  @map("file_size_bytes")
+  mimeType     String? @map("mime_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@unique([scanId, artifactType])
+  @@map("scan_artifacts")
+}
+
+// ─── 익명 통계 스냅샷 (제품 개선 데이터) ─────────────────────────────────
+// 사용자 ID, 파일 경로 없음. 스캔 완료 시 워커가 INSERT.
+
+model VulnStatSnapshot {
+  id         String @id @default(cuid())
+  domainType String @map("domain_type")
+  detectedStack Json @map("detected_stack") // ["nodejs","express"]
+
+  totalVulns    Int @default(0) @map("total_vulns")
+  criticalCount Int @default(0) @map("critical_count")
+  highCount     Int @default(0) @map("high_count")
+  mediumCount   Int @default(0) @map("medium_count")
+  lowCount      Int @default(0) @map("low_count")
+
+  vulnTypeCounts Json   @map("vuln_type_counts") // {"sql_injection":2,"xss":1}
+  securityScore  Int    @map("security_score")
+  securityGrade  String @map("security_grade")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([domainType])
+  @@index([createdAt(sort: Desc)])
+  @@map("vuln_stat_snapshots")
+}
+
+// ─── 사용량 로그 (과금/모니터링) ──────────────────────────────────────────
+
+model UsageLog {
+  id       String  @id @default(cuid())
+  userId   String  @map("user_id")
+  scanId   String  @map("scan_id")
+  action   String  // scan_submitted|scan_completed|report_downloaded|false_positive_reported
+  metadata Json?   // 도메인, depth, 취약점 수 등 추가 정보
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("usage_logs")
+}

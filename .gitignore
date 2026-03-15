@@ -1,0 +1,41 @@
+# 시크릿 및 환경 변수 (절대 커밋 금지)
+.env
+.env.local
+.env.production
+.env.staging
+credentials.json
+token.json
+*.pem
+*.key
+
+# 임시 스캔 파일
+.tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+
+# Node.js
+node_modules/
+.next/
+out/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# 스캔 결과 (S3에 저장)
+*.sarif
+*.pdf
+
+# 테스트 실패 로그 (로컬 전용)
+test/failure_log.json
