@@ -95,7 +95,7 @@ def post_or_update_comment(token: str, repo: str, pr_number: int, body: str) -> 
 
 
 def main() -> None:
-    token = os.environ.get("INPUT_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
+    token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
         print("No GitHub token provided, skipping PR comment.")
         return

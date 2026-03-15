@@ -15,10 +15,6 @@ inputs:
     description: "서비스 도메인 (ecommerce|game|platform|healthcare|fintech|education|auto)"
     required: false
     default: "auto"
-  github-token:
-    description: "GitHub token for posting PR comments (default: automatic)"
-    required: false
-    default: ${{ github.token }}
 
 outputs:
   score:
@@ -58,4 +54,4 @@ runs:
   env:
     INPUT_PATH: ${{ inputs.path }}
     INPUT_DOMAIN: ${{ inputs.domain }}
-    INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+    GITHUB_TOKEN: ${{ github.token }}
