@@ -51,7 +51,7 @@ outputs:
 runs:
   using: "docker"
   # TODO: 첫 GHCR 이미지 push 후 아래로 교체
-  # image: "docker://ghcr.io/vibesafe/vibesafe-action:v1"
+  # image: "docker://ghcr.io/vibesafeio/vibesafe-action:v1"
   image: "Dockerfile.action"
   env:
     INPUT_PATH: ${{ inputs.path }}

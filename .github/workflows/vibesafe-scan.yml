@@ -20,7 +20,7 @@ jobs:
 
       - name: Run VibeSafe scan
         id: vibesafe
-        uses: vibesafe/vibesafe-action@v1
+        uses: vibesafeio/vibesafe-action@v1
         with:
           domain: auto   # 자동 탐지 (또는 ecommerce, fintech, healthcare 등 명시 가능)
 

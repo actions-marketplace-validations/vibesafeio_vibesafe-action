@@ -42,7 +42,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/vibesafe/vibesafe-action
+          images: ghcr.io/vibesafeio/vibesafe-action
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}

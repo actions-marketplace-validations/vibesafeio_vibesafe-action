@@ -37,8 +37,8 @@
 ## 아키텍처 결정 사항
 
 ### GitHub Action 구조
-- `action.yml` + `Dockerfile.action` + `action_entrypoint.sh` = 사용자가 `uses: vibesafe/vibesafe-action@v1`로 호출
-- `action.yml`의 `image:`는 현재 `Dockerfile.action` (로컬 빌드). 첫 GHCR 이미지 push 후 `docker://ghcr.io/vibesafe/vibesafe-action:v1`으로 교체.
+- `action.yml` + `Dockerfile.action` + `action_entrypoint.sh` = 사용자가 `uses: vibesafeio/vibesafe-action@v1`로 호출
+- `action.yml`의 `image:`는 현재 `Dockerfile.action` (로컬 빌드). 첫 GHCR 이미지 push 후 `docker://ghcr.io/vibesafeio/vibesafe-action:v1`으로 교체.
 - PR 코멘트에서 `${{ steps.*.outputs.score_json }}`처럼 JSON 전체를 JS 문자열에 인터폴레이션 금지 (injection 취약). `env:` 블록 경유 → `process.env.*` 패턴 사용.
 
 ### 스코어링
