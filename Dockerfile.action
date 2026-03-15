@@ -10,6 +10,7 @@ COPY tools/scanner/sast_runner.py        tools/scanner/sast_runner.py
 COPY tools/scanner/domain_rule_engine.py tools/scanner/domain_rule_engine.py
 COPY tools/scanner/secret_scanner.py     tools/scanner/secret_scanner.py
 COPY tools/report/score_calculator.py    tools/report/score_calculator.py
+COPY tools/report/pr_commenter.py       tools/report/pr_commenter.py
 
 # __init__.py 없으면 import 경로 문제 없음 (CLI 직접 호출)
 RUN mkdir -p tools/scanner tools/report

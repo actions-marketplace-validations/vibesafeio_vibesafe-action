@@ -80,3 +80,7 @@ import os
 with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
     f.write('\n'.join(lines) + '\n')
 "
+
+echo "::group::VibeSafe — PR 코멘트"
+python /vibesafe/tools/report/pr_commenter.py /tmp/score.json || echo "PR 코멘트 실패 (non-fatal)"
+echo "::endgroup::"

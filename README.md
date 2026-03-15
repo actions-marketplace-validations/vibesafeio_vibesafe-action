@@ -37,77 +37,18 @@ jobs:
   vibesafe:
     name: Security Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Run VibeSafe scan
-        id: vibesafe
         uses: vibesafeio/vibesafe-action@v0
         with:
           domain: auto
-
-      - name: Post PR comment
-        uses: actions/github-script@v7
-        env:
-          VIBESAFE_SCORE: ${{ steps.vibesafe.outputs.score }}
-          VIBESAFE_GRADE: ${{ steps.vibesafe.outputs.grade }}
-          VIBESAFE_DOMAIN: ${{ steps.vibesafe.outputs.domain }}
-          VIBESAFE_CERTIFIED: ${{ steps.vibesafe.outputs.certified }}
-          VIBESAFE_CRITICAL: ${{ steps.vibesafe.outputs.critical }}
-          VIBESAFE_HIGH: ${{ steps.vibesafe.outputs.high }}
-          VIBESAFE_MEDIUM: ${{ steps.vibesafe.outputs.medium }}
-          VIBESAFE_LOW: ${{ steps.vibesafe.outputs.low }}
-          VIBESAFE_TOTAL: ${{ steps.vibesafe.outputs.total }}
-          VIBESAFE_BLOCK_REASON: ${{ steps.vibesafe.outputs.certified_block_reason }}
-        with:
-          script: |
-            const points    = parseInt(process.env.VIBESAFE_SCORE, 10);
-            const grade     = process.env.VIBESAFE_GRADE;
-            const domain    = process.env.VIBESAFE_DOMAIN;
-            const certified = process.env.VIBESAFE_CERTIFIED === 'true';
-            const critical  = parseInt(process.env.VIBESAFE_CRITICAL, 10);
-            const high      = parseInt(process.env.VIBESAFE_HIGH, 10);
-            const medium    = parseInt(process.env.VIBESAFE_MEDIUM, 10);
-            const low       = parseInt(process.env.VIBESAFE_LOW, 10);
-            const total     = parseInt(process.env.VIBESAFE_TOTAL, 10);
-            const blockReason = process.env.VIBESAFE_BLOCK_REASON || '';
-            const gradeEmoji = {A:'🟢',B:'🟡',C:'🟠',D:'🔴',F:'🔴'}[grade]||'⚪';
-            const certBadge = certified ? ' ✅ **Certified**' : '';
-            const certBlock = blockReason ? `\n> 인증 불가: ${blockReason}` : '';
-            let summary = '';
-            if (critical > 0)    summary = `Critical 취약점 ${critical}개 발견 — 즉시 수정 필요`;
-            else if (high > 0)   summary = `High 취약점 ${high}개 발견 — 머지 전 수정 권장`;
-            else if (medium > 0) summary = `Medium 취약점 ${medium}개 발견`;
-            else if (low > 0)    summary = `Low 취약점 ${low}개`;
-            else                 summary = `취약점 미발견`;
-            const body = [
-              `## 🔐 VibeSafe 보안 스캔 결과`,``,
-              `${gradeEmoji} **${points}/100** (등급 ${grade})${certBadge}`,
-              certBlock,``,`> ${summary}`,``,
-              `| 심각도 | 건수 |`,`|--------|------|`,
-              `| 🔴 Critical | ${critical} |`,`| 🟠 High | ${high} |`,
-              `| 🟡 Medium | ${medium} |`,`| 🟢 Low | ${low} |`,``,
-              `도메인: \`${domain}\` · 총 ${total}건`,``,
-              `<sub>Powered by [VibeSafe](https://vibesafe.dev)</sub>`,
-            ].join('\n');
-            const {data:comments} = await github.rest.issues.listComments({
-              owner:context.repo.owner, repo:context.repo.repo, issue_number:context.issue.number
-            });
-            const existing = comments.find(c =>
-              c.user.login==='github-actions[bot]' && c.body.includes('VibeSafe 보안 스캔 결과')
-            );
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner:context.repo.owner, repo:context.repo.repo, comment_id:existing.id, body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner:context.repo.owner, repo:context.repo.repo, issue_number:context.issue.number, body
-              });
-            }
 ```
+
+PR 코멘트는 action이 자동으로 달아줍니다. 별도 설정 불필요.
 
 ---
 
