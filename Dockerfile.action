@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# git: Semgrep이 git ls-files로 스캔 대상을 찾음 (없으면 RPC error → 0건)
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
 # Semgrep + VibeSafe 도구 의존성 설치
 RUN pip install --no-cache-dir semgrep
 
