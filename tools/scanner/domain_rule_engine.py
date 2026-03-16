@@ -180,8 +180,12 @@ def classify_domain(source_path: Path) -> dict:
     }
 
 
-def get_ruleset(domain: str, detected_stack: list[str] | None = None) -> dict:
-    """도메인과 기술 스택에 맞는 Semgrep 규칙셋을 반환한다."""
+def get_ruleset(
+    domain: str,
+    detected_stack: list[str] | None = None,
+    languages: list[str] | None = None,
+) -> dict:
+    """도메인, 기술 스택, 감지된 언어에 맞는 Semgrep 규칙셋을 반환한다."""
     if domain not in DOMAIN_RULESETS:
         # 알 수 없는 도메인 → 범용 규칙셋
         return {
@@ -193,20 +197,34 @@ def get_ruleset(domain: str, detected_stack: list[str] | None = None) -> dict:
         }
 
     ruleset = dict(DOMAIN_RULESETS[domain])
+    configs = set(ruleset["semgrep_configs"])
+
+    # 감지된 언어별 규칙 추가 — 스택 감지 실패해도 언어만 있으면 커버
+    langs = set(languages or [])
+    if "python" in langs:
+        configs.add("p/python")
+    if "javascript" in langs or "typescript" in langs:
+        configs.add("p/javascript")
+    if "go" in langs:
+        configs.add("p/golang")
+    if "java" in langs:
+        configs.add("p/java")
+    if "ruby" in langs:
+        configs.add("p/ruby")
 
     # 스택별 추가 규칙
     if detected_stack:
         if "nextjs" in detected_stack or "react" in detected_stack:
-            ruleset["semgrep_configs"].append("p/react")
+            configs.add("p/react")
         if "django" in detected_stack or "flask" in detected_stack:
-            ruleset["semgrep_configs"].append("p/python")
-        # p/nodejs-security는 semgrep registry에 미존재 (exit 7) → 제거
-        # JS/Node 취약점은 p/javascript + p/owasp-top-ten이 커버
+            configs.add("p/python")
         if "prisma" in detected_stack:
-            ruleset["semgrep_configs"].append("p/javascript")
+            configs.add("p/javascript")
 
+    ruleset["semgrep_configs"] = sorted(configs)
     ruleset["domain"] = domain
     ruleset["detected_stack"] = detected_stack or []
+    ruleset["languages"] = sorted(langs)
     return ruleset
 
 
@@ -224,8 +242,8 @@ def validate_rulesets() -> dict:
     all_packs: set[str] = set()
     for ruleset in DOMAIN_RULESETS.values():
         all_packs.update(ruleset["semgrep_configs"])
-    # 스택 기반 추가 팩
-    all_packs.update(["p/react", "p/python"])
+    # 스택/언어 기반 추가 팩
+    all_packs.update(["p/react", "p/python", "p/golang", "p/ruby", "p/java"])
 
     results = {}
     invalid = []
@@ -268,6 +286,7 @@ def main():
     group.add_argument("--validate", action="store_true", help="모든 semgrep 팩 유효성 검증 (CI용)")
     parser.add_argument("--path", help="소스 코드 경로 (classify 시 필수)")
     parser.add_argument("--stack", help="탐지된 기술 스택 (쉼표 구분)")
+    parser.add_argument("--languages", help="탐지된 언어 (쉼표 구분)")
     args = parser.parse_args()
 
     if args.validate:
@@ -281,7 +300,8 @@ def main():
         result = classify_domain(Path(args.path))
     else:
         stack = [s.strip() for s in args.stack.split(",")] if args.stack else []
-        result = get_ruleset(args.domain, stack)
+        langs = [l.strip() for l in args.languages.split(",")] if args.languages else []
+        result = get_ruleset(args.domain, stack, langs)
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
