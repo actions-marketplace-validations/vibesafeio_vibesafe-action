@@ -27,11 +27,13 @@ echo "도메인: $DOMAIN"
 # 룰셋 선택 (스택 + 언어 정보 모두 전달)
 STACK=$(python -c "import json; d=json.load(open('/tmp/stack.json')); print(','.join(d.get('detected_stack', [])))")
 LANGS=$(python -c "import json; d=json.load(open('/tmp/stack.json')); print(','.join(d.get('languages', [])))")
+echo "언어: $LANGS"
 python /vibesafe/tools/scanner/domain_rule_engine.py \
   --domain "$DOMAIN" \
   --stack "$STACK" \
   --languages "$LANGS" \
   > /tmp/ruleset.json
+echo "규칙: $(python -c "import json; print(json.load(open('/tmp/ruleset.json'))['semgrep_configs'])")"
 
 echo "::endgroup::"
 
