@@ -18,7 +18,7 @@ SECRET_PATTERNS = [
     {"id": "aws_access_key",      "name": "AWS Access Key ID",        "pattern": r"(?i)AKIA[0-9A-Z]{16}"},
     {"id": "aws_secret_key",      "name": "AWS Secret Access Key",    "pattern": r"(?i)aws[_\-\s]?secret[_\-\s]?access[_\-\s]?key\s*[=:]\s*['\"]?([A-Za-z0-9+/]{40})['\"]?"},
     {"id": "github_token",        "name": "GitHub Personal Access Token", "pattern": r"ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}"},
-    {"id": "openai_key",          "name": "OpenAI API Key",           "pattern": r"sk-[A-Za-z0-9]{48}"},
+    {"id": "openai_key",          "name": "OpenAI API Key",           "pattern": r"sk-(?:proj-)?[A-Za-z0-9\-_]{20,}"},
     {"id": "stripe_secret",       "name": "Stripe Secret Key",        "pattern": r"sk_live_[A-Za-z0-9]{24,}"},
     {"id": "stripe_publishable",  "name": "Stripe Publishable Key",   "pattern": r"pk_live_[A-Za-z0-9]{24,}"},
     {"id": "google_api_key",      "name": "Google API Key",           "pattern": r"AIza[0-9A-Za-z\-_]{35}"},

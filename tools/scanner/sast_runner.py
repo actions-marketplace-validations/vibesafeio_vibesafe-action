@@ -153,11 +153,22 @@ def parse_sarif_summary(sarif_file: Path) -> dict:
 
     data = json.loads(sarif_file.read_text())
     counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
+    severity_map = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
 
     for run in data.get("runs", []):
+        # Build rule-level severity lookup from tool.driver.rules[].defaultConfiguration.level
+        rule_levels: dict[str, str] = {}
+        for rule in run.get("tool", {}).get("driver", {}).get("rules", []):
+            default_level = rule.get("defaultConfiguration", {}).get("level", "")
+            if default_level:
+                rule_levels[rule["id"]] = default_level.upper()
+
         for result in run.get("results", []):
-            level = result.get("level", "note").upper()
-            severity_map = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
+            # Prefer result.level, fall back to rule defaultConfiguration.level
+            level = result.get("level", "").upper()
+            if not level or level == "NONE":
+                rule_id = result.get("ruleId", "")
+                level = rule_levels.get(rule_id, "NOTE")
             severity = severity_map.get(level, "INFO")
             counts[severity] = counts.get(severity, 0) + 1
 
