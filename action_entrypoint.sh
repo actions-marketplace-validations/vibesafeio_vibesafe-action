@@ -39,11 +39,13 @@ echo "::endgroup::"
 
 echo "::group::VibeSafe — SAST 스캔"
 RULES=$(python -c "import json; d=json.load(open('/tmp/ruleset.json')); print(','.join(d.get('semgrep_configs', ['p/owasp-top-ten'])))")
+echo "스캔 대상: $TARGET ($(find "$TARGET" -name '*.py' | wc -l) Python files)"
 python /vibesafe/tools/scanner/sast_runner.py \
   --path "$TARGET" \
   --rules "$RULES" \
   --output /tmp/sast.sarif \
   --timeout 120
+echo "SARIF 결과 수: $(python -c "import json; d=json.load(open('/tmp/sast.sarif')); print(sum(len(r.get('results',[])) for r in d.get('runs',[])))" 2>/dev/null || echo 'N/A')"
 echo "::endgroup::"
 
 echo "::group::VibeSafe — 시크릿 스캔"

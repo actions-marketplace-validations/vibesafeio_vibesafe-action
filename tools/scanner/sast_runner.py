@@ -203,6 +203,11 @@ def main():
 
     scan_result = run_semgrep(source_path, rule_ids, output_file, args.timeout)
 
+    # 디버그: Semgrep 실행 정보 (stderr=stdout merged)
+    semgrep_log = scan_result["stdout"] or ""
+    if scan_result["exit_code"] != 0 or "error" in semgrep_log.lower():
+        sys.stderr.write(f"[sast_runner] semgrep exit={scan_result['exit_code']}, log={semgrep_log[:500]}\n")
+
     if scan_result["exit_code"] not in (0, 1):  # semgrep: 0=clean, 1=findings, other=error
         print(json.dumps({"error": "Semgrep 실행 실패", "details": scan_result["stderr"]}))
         sys.exit(1)
