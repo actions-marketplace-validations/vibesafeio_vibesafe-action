@@ -38,6 +38,14 @@ DOMAIN_WEIGHTS = {
     },
 }
 
+# 프레임워크 충돌 맵: key가 감지되면 value의 rule prefix를 오탐으로 제거
+FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
+    "flask": ["python.django."],
+    "django": ["python.flask."],
+    "fastapi": ["python.django.", "python.flask."],
+    "express": ["python.django.", "python.flask."],
+}
+
 # 기본 CVSS 점수 (심각도 → 점수)
 BASE_CVSS = {"critical": 9.5, "high": 7.5, "medium": 5.0, "low": 2.0, "info": 0.0}
 
@@ -55,10 +63,15 @@ def get_domain_weight(vuln_type: str, domain: str) -> float:
     return 1.0
 
 
-def parse_sarif_vulnerabilities(sarif_file: Path) -> list[dict]:
-    """SARIF 파일에서 취약점 목록을 추출한다."""
+def parse_sarif_vulnerabilities(sarif_file: Path, detected_stack: list[str] | None = None) -> list[dict]:
+    """SARIF 파일에서 취약점 목록을 추출한다. 프레임워크 충돌 오탐을 필터링."""
     if not sarif_file.exists():
         return []
+
+    # 프레임워크 충돌 필터
+    exclude_prefixes: list[str] = []
+    for framework in (detected_stack or []):
+        exclude_prefixes.extend(FRAMEWORK_CONFLICTS.get(framework, []))
 
     data = json.loads(sarif_file.read_text())
     vulns = []
@@ -69,12 +82,17 @@ def parse_sarif_vulnerabilities(sarif_file: Path) -> list[dict]:
         rules = {r.get("id", ""): r for r in run.get("tool", {}).get("driver", {}).get("rules", [])}
 
         for result in run.get("results", []):
+            rule_id = result.get("ruleId", "")
+
+            # 프레임워크 충돌 오탐 필터링
+            if any(rule_id.startswith(prefix) for prefix in exclude_prefixes):
+                continue
+
             # result.level이 없으면 rule의 defaultConfiguration.level로 fallback
             level = result.get("level")
             if not level:
-                rule_id_for_level = result.get("ruleId", "")
                 level = (
-                    rules.get(rule_id_for_level, {})
+                    rules.get(rule_id, {})
                     .get("defaultConfiguration", {})
                     .get("level", "note")
                 )
@@ -82,7 +100,6 @@ def parse_sarif_vulnerabilities(sarif_file: Path) -> list[dict]:
             severity = level_map.get(level, "info")
 
             # 규칙 기반 분류 시도
-            rule_id = result.get("ruleId", "")
             vuln_type = "unknown"
             for known_type in ["sql_injection", "xss", "ssrf", "idor", "hardcoded_secret", "missing_encryption"]:
                 if known_type.replace("_", "") in rule_id.lower().replace("_", ""):
@@ -106,6 +123,7 @@ def calculate_score(
     domain: str,
     triage_mode: bool = False,
     raw_input: list[dict] | None = None,
+    detected_stack: list[str] | None = None,
 ) -> dict:
     """모든 스캔 결과를 종합하여 최종 보안 점수를 산출한다."""
 
@@ -116,7 +134,7 @@ def calculate_score(
     else:
         # SAST 결과
         if sast_result_file and sast_result_file.exists():
-            all_vulns.extend(parse_sarif_vulnerabilities(sast_result_file))
+            all_vulns.extend(parse_sarif_vulnerabilities(sast_result_file, detected_stack))
 
         # SCA 결과
         if sca_result_file and sca_result_file.exists():
@@ -220,11 +238,19 @@ def main():
     parser.add_argument("--domain", required=True, help="서비스 도메인")
     parser.add_argument("--triage", action="store_true", help="트리아지 모드 (원시 취약점 입력)")
     parser.add_argument("--input", help="트리아지 모드 입력 JSON 파일")
+    parser.add_argument("--stack-file", help="스택 탐지 결과 JSON (프레임워크 충돌 필터용)")
     args = parser.parse_args()
 
     raw_input = None
     if args.triage and args.input:
         raw_input = json.loads(Path(args.input).read_text())
+
+    detected_stack: list[str] = []
+    if args.stack_file:
+        try:
+            detected_stack = json.loads(Path(args.stack_file).read_text()).get("detected_stack", [])
+        except (json.JSONDecodeError, OSError):
+            pass
 
     result = calculate_score(
         sast_result_file=Path(args.sast_result) if args.sast_result else None,
@@ -233,6 +259,7 @@ def main():
         domain=args.domain,
         triage_mode=args.triage,
         raw_input=raw_input,
+        detected_stack=detected_stack,
     )
 
     print(json.dumps(result, ensure_ascii=False, indent=2))

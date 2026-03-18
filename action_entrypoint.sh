@@ -64,6 +64,7 @@ python /vibesafe/tools/report/score_calculator.py \
   --domain "$DOMAIN" \
   --sast-result /tmp/sast.sarif \
   --secret-result /tmp/secrets.json \
+  --stack-file /tmp/stack.json \
   > /tmp/score.json
 cat /tmp/score.json
 echo "::endgroup::"
