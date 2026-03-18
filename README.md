@@ -165,16 +165,41 @@ chmod +x .git/hooks/pre-commit
 
 ---
 
+## MCP Server — IDE 실시간 보안 검증 (선택)
+
+Claude Code나 Cursor에서 코딩 중 실시간으로 시크릿을 감지합니다.
+
+**Claude Code:**
+```bash
+claude mcp add vibesafe -- python /path/to/vibesafe/tools/mcp_server.py
+```
+
+**Cursor** (`.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "vibesafe": {
+      "command": "python",
+      "args": ["/path/to/vibesafe/tools/mcp_server.py"]
+    }
+  }
+}
+```
+
+AI 에이전트가 코드를 작성할 때 `vibesafe_check_secret`과 `vibesafe_scan_file` 도구를 사용하여 시크릿과 취약점을 즉시 감지합니다.
+
+---
+
 ## FAQ
 
-**코드가 외부로 나가나요?**
-아니요. 모든 스캔은 GitHub Actions runner 안에서 실행됩니다. 코드가 VibeSafe 서버로 전송되지 않습니다.
+**Does my code leave my environment?**
+No. All scanning runs inside the GitHub Actions runner. No code is sent to VibeSafe servers.
 
-**비용이 드나요?**
-GitHub Actions 실행 시간만 소비합니다. 스캔 1회 약 20초. Public 레포는 무제한 무료입니다.
+**How much does it cost?**
+Free. Only consumes GitHub Actions minutes (~20 seconds per scan). Public repos have unlimited free minutes.
 
-**어떤 언어를 지원하나요?**
-Semgrep이 지원하는 모든 언어 — JavaScript/TypeScript, Python, Java, Go, Ruby, PHP, Kotlin.
+**What languages are supported?**
+All languages supported by Semgrep — JavaScript/TypeScript, Python, Java, Go, Ruby, PHP, Kotlin, and more.
 
 ---
 

@@ -93,7 +93,7 @@ def scan_file(file_path: Path) -> list[dict]:
                     "masked_value": masked,
                     "entropy": round(shannon_entropy(matched_value), 2),
                     "severity": "critical",
-                    "remediation": f"이 {pattern_def['name']}을 즉시 무효화하고 환경 변수(.env)로 이동하세요.",
+                    "remediation": f"Revoke this {pattern_def['name']} immediately and move it to environment variables (.env) or a secret manager.",
                 })
 
     return findings
