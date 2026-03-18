@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Docker 컨테이너 내부에서 마운트된 워크스페이스를 git이 신뢰하도록 설정
+# (없으면 Semgrep의 git ls-files가 exit 128 → 0건 스캔)
+git config --global --add safe.directory "${GITHUB_WORKSPACE:-/github/workspace}"
+
 # GitHub Actions 환경변수로 입력받은 경로
 TARGET="${INPUT_PATH:-.}"
 DOMAIN="${INPUT_DOMAIN:-auto}"
