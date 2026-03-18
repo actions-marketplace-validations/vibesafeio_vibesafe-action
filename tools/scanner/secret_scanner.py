@@ -99,6 +99,28 @@ def scan_file(file_path: Path) -> list[dict]:
     return findings
 
 
+def scan_text(text: str) -> list[dict]:
+    """문자열에서 시크릿 패턴을 스캔한다. MCP 서버 및 pre-commit에서 사용."""
+    findings = []
+    for line_num, line in enumerate(text.splitlines(), start=1):
+        for pattern_def in SECRET_PATTERNS:
+            matches = re.finditer(pattern_def["pattern"], line)
+            for match in matches:
+                matched_value = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
+                if not is_likely_real_secret(matched_value):
+                    continue
+                masked = matched_value[:4] + "*" * min(len(matched_value) - 4, 20)
+                findings.append({
+                    "type": pattern_def["id"],
+                    "name": pattern_def["name"],
+                    "line": line_num,
+                    "masked_value": masked,
+                    "entropy": round(shannon_entropy(matched_value), 2),
+                    "severity": "critical",
+                })
+    return findings
+
+
 def scan_directory(source_path: Path) -> list[dict]:
     all_findings = []
 
