@@ -8,7 +8,143 @@ import sys
 import urllib.request
 
 
-def build_comment_body(score: dict) -> str:
+SEVERITY_EMOJI = {
+    "CRITICAL": "\U0001f534",
+    "HIGH": "\U0001f7e0",
+    "MEDIUM": "\U0001f7e1",
+    "LOW": "\U0001f7e2",
+    "INFO": "\u2139\ufe0f",
+}
+SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+SEVERITY_MAP = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
+MAX_FINDINGS = 20  # PR 코멘트 길이 제한 방지
+
+
+def load_sarif_findings(sarif_path: str) -> list[dict]:
+    """SARIF 파일에서 개별 취약점 목록을 추출한다."""
+    if not os.path.exists(sarif_path):
+        return []
+    with open(sarif_path) as f:
+        data = json.load(f)
+
+    findings: list[dict] = []
+    for run in data.get("runs", []):
+        # rule ID → severity, message 매핑
+        rule_meta: dict[str, dict] = {}
+        for rule in run.get("tool", {}).get("driver", {}).get("rules", []):
+            level = rule.get("defaultConfiguration", {}).get("level", "").upper()
+            # rule의 help/message 텍스트 (수정 가이드 포함)
+            desc = (
+                rule.get("help", {}).get("text", "")
+                or rule.get("shortDescription", {}).get("text", "")
+                or rule.get("fullDescription", {}).get("text", "")
+            )
+            rule_meta[rule["id"]] = {"level": level, "description": desc}
+
+        for result in run.get("results", []):
+            rule_id = result.get("ruleId", "unknown")
+            meta = rule_meta.get(rule_id, {})
+
+            # severity 결정
+            level = result.get("level", "").upper()
+            if not level or level == "NONE":
+                level = meta.get("level", "NOTE")
+            severity = SEVERITY_MAP.get(level, level)
+            if severity not in SEVERITY_ORDER:
+                severity = "INFO"
+
+            # 위치 정보
+            locations = result.get("locations", [])
+            if locations:
+                phys = locations[0].get("physicalLocation", {})
+                file_path = phys.get("artifactLocation", {}).get("uri", "")
+                start_line = phys.get("region", {}).get("startLine", 0)
+                snippet = phys.get("region", {}).get("snippet", {}).get("text", "").strip()
+            else:
+                file_path = ""
+                start_line = 0
+                snippet = ""
+
+            # 메시지 (Semgrep message > rule description)
+            message = result.get("message", {}).get("text", "") or meta.get("description", "")
+
+            findings.append({
+                "severity": severity,
+                "rule_id": rule_id,
+                "file": file_path,
+                "line": start_line,
+                "snippet": snippet,
+                "message": message,
+            })
+
+    findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
+    return findings
+
+
+def load_secret_findings(secrets_path: str) -> list[dict]:
+    """시크릿 스캔 결과를 findings 형식으로 변환한다."""
+    if not os.path.exists(secrets_path):
+        return []
+    with open(secrets_path) as f:
+        data = json.load(f)
+
+    findings: list[dict] = []
+    for s in data.get("secrets", []):
+        findings.append({
+            "severity": "CRITICAL",
+            "rule_id": s.get("type", "hardcoded_secret"),
+            "file": s.get("file", ""),
+            "line": s.get("line", 0),
+            "snippet": s.get("match", ""),
+            "message": f"하드코딩된 시크릿 ({s.get('name', s.get('type', 'secret'))}) — 환경 변수나 시크릿 매니저로 이동하세요",
+        })
+    return findings
+
+
+def format_findings_section(findings: list[dict]) -> str:
+    """취약점 상세 목록을 마크다운으로 포맷한다."""
+    if not findings:
+        return ""
+
+    shown = findings[:MAX_FINDINGS]
+    remaining = len(findings) - len(shown)
+
+    lines = ["", "### 발견된 취약점", ""]
+    for f in shown:
+        emoji = SEVERITY_EMOJI.get(f["severity"], "\u26aa")
+        location = ""
+        if f["file"]:
+            location = f"  `{f['file']}"
+            if f["line"]:
+                location += f":{f['line']}"
+            location += "`"
+
+        # 첫 줄: severity + rule ID + 위치
+        lines.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}")
+
+        # 메시지 (한 줄로 축약, 200자 제한)
+        msg = f["message"].replace("\n", " ").strip()
+        if len(msg) > 200:
+            msg = msg[:197] + "..."
+        if msg:
+            lines.append(f"> {msg}")
+
+        # 코드 스니펫 (있으면)
+        if f["snippet"]:
+            snippet_line = f["snippet"].split("\n")[0][:120]
+            lines.append(f"> ```\n> {snippet_line}\n> ```")
+
+        lines.append("")
+
+    if remaining > 0:
+        lines.append(f"<sub>외 {remaining}건 생략</sub>")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
+                       secrets_path: str = "/tmp/secrets.json") -> str:
     points = score["score"]
     grade = score["grade"]
     domain = score["domain"]
@@ -22,38 +158,48 @@ def build_comment_body(score: dict) -> str:
 
     grade_emoji = {"A": "\U0001f7e2", "B": "\U0001f7e1", "C": "\U0001f7e0", "D": "\U0001f534", "F": "\U0001f534"}.get(grade, "\u26aa")
     cert_badge = " \u2705 **Certified**" if certified else ""
-    cert_block = f"\n> \uc778\uc99d \ubd88\uac00: {block_reason}" if block_reason else ""
+    cert_block = f"\n> 인증 불가: {block_reason}" if block_reason else ""
 
     if critical > 0:
-        summary = f"Critical \ucde8\uc57d\uc810 {critical}\uac1c \ubc1c\uacac \u2014 \uc989\uc2dc \uc218\uc815 \ud544\uc694"
+        summary = f"Critical 취약점 {critical}개 발견 — 즉시 수정 필요"
     elif high > 0:
-        summary = f"High \ucde8\uc57d\uc810 {high}\uac1c \ubc1c\uacac \u2014 \uba38\uc9c0 \uc804 \uc218\uc815 \uad8c\uc7a5"
+        summary = f"High 취약점 {high}개 발견 — 머지 전 수정 권장"
     elif medium > 0:
-        summary = f"Medium \ucde8\uc57d\uc810 {medium}\uac1c \ubc1c\uacac"
+        summary = f"Medium 취약점 {medium}개 발견"
     elif low > 0:
-        summary = f"Low \ucde8\uc57d\uc810 {low}\uac1c"
+        summary = f"Low 취약점 {low}개"
     else:
-        summary = "\ucde8\uc57d\uc810 \ubbf8\ubc1c\uacac"
+        summary = "취약점 미발견"
 
     lines = [
-        "## \U0001f510 VibeSafe \ubcf4\uc548 \uc2a4\uce94 \uacb0\uacfc",
+        "## \U0001f510 VibeSafe 보안 스캔 결과",
         "",
-        f"{grade_emoji} **{points}/100** (\ub4f1\uae09 {grade}){cert_badge}",
+        f"{grade_emoji} **{points}/100** (등급 {grade}){cert_badge}",
         cert_block,
         "",
         f"> {summary}",
         "",
-        "| \uc2ec\uac01\ub3c4 | \uac74\uc218 |",
+        "| 심각도 | 건수 |",
         "|--------|------|",
         f"| \U0001f534 Critical | {critical} |",
         f"| \U0001f7e0 High     | {high} |",
         f"| \U0001f7e1 Medium   | {medium} |",
         f"| \U0001f7e2 Low      | {low} |",
         "",
-        f"\ub3c4\uba54\uc778: `{domain}` \u00b7 \ucd1d {total}\uac74",
+        f"도메인: `{domain}` · 총 {total}건",
+    ]
+
+    # 취약점 상세 목록 추가
+    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path)
+    all_findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
+    details = format_findings_section(all_findings)
+    if details:
+        lines.append(details)
+
+    lines.extend([
         "",
         "<sub>Powered by [VibeSafe](https://vibesafe.dev)</sub>",
-    ]
+    ])
     return "\n".join(lines)
 
 
@@ -122,7 +268,9 @@ def main() -> None:
     with open(score_path) as f:
         score = json.load(f)
 
-    body = build_comment_body(score)
+    sarif_path = os.environ.get("VIBESAFE_SARIF", "/tmp/sast.sarif")
+    secrets_path = os.environ.get("VIBESAFE_SECRETS", "/tmp/secrets.json")
+    body = build_comment_body(score, sarif_path, secrets_path)
     post_or_update_comment(token, repo, pr_number, body)
 
 
