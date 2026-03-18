@@ -99,6 +99,23 @@ def detect_stack(source_path: Path) -> dict:
         except OSError:
             pass
 
+    # Python import문 기반 프레임워크 감지 (requirements.txt 없는 프로젝트 대응)
+    IMPORT_SIGNALS = {
+        "flask": ["flask"],
+        "django": ["django"],
+        "fastapi": ["fastapi"],
+        "express": [],  # JS — import 분석은 package.json으로 충분
+    }
+    for py_file in source_path.rglob("*.py"):
+        try:
+            content = py_file.read_text(errors="ignore")
+            for framework, modules in IMPORT_SIGNALS.items():
+                for mod in modules:
+                    if f"import {mod}" in content or f"from {mod}" in content:
+                        detected.add(framework)
+        except OSError:
+            pass
+
     # 특수 파일 존재 여부
     if (source_path / "schema.prisma").exists() or list(source_path.rglob("schema.prisma")):
         detected.add("prisma")
