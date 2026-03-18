@@ -44,6 +44,10 @@ FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
     "django": ["python.flask."],
     "fastapi": ["python.django.", "python.flask."],
     "express": ["python.django.", "python.flask."],
+    "nextjs": ["python.django.", "python.flask."],
+    "react": ["python.django.", "python.flask."],
+    "vue": ["python.django.", "python.flask."],
+    "spring": ["python.flask.", "python.django."],
 }
 
 # 기본 CVSS 점수 (심각도 → 점수)
@@ -211,13 +215,13 @@ def calculate_score(
     certified_block_reason = None
     if not certified:
         if counts["critical"] > 0:
-            certified_block_reason = f"critical 취약점 {counts['critical']}개"
+            certified_block_reason = f"{counts['critical']} critical vulnerabilities"
         elif counts["high"] > 0:
-            certified_block_reason = f"high 취약점 {counts['high']}개"
+            certified_block_reason = f"{counts['high']} high vulnerabilities"
         elif blocked_rules:
-            certified_block_reason = f"위험 패턴 탐지: {blocked_rules[0]}"
+            certified_block_reason = f"dangerous pattern detected: {blocked_rules[0]}"
         elif score < 85:
-            certified_block_reason = f"점수 미달 ({score}/85)"
+            certified_block_reason = f"score below threshold ({score}/85)"
 
     return {
         "score": score,

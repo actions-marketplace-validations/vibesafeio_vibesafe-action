@@ -116,6 +116,24 @@ def detect_stack(source_path: Path) -> dict:
         except OSError:
             pass
 
+    # JS/TS import 기반 프레임워크 감지
+    JS_IMPORT_SIGNALS = {
+        "express": ["require('express')", "require(\"express\")", "from 'express'", "from \"express\""],
+        "nextjs": ["from 'next", "from \"next", "require('next"],
+        "react": ["from 'react'", "from \"react\"", "require('react')"],
+        "vue": ["from 'vue'", "from \"vue\"", "createApp("],
+    }
+    for js_file in list(source_path.rglob("*.js"))[:200] + list(source_path.rglob("*.ts"))[:200]:
+        if "node_modules" in str(js_file):
+            continue
+        try:
+            content = js_file.read_text(errors="ignore")[:5000]  # first 5KB
+            for framework, signals in JS_IMPORT_SIGNALS.items():
+                if any(sig in content for sig in signals):
+                    detected.add(framework)
+        except OSError:
+            pass
+
     # 특수 파일 존재 여부
     if (source_path / "schema.prisma").exists() or list(source_path.rglob("schema.prisma")):
         detected.add("prisma")
@@ -124,6 +142,13 @@ def detect_stack(source_path: Path) -> dict:
     if list(source_path.rglob("go.mod")):
         detected.add("go_modules")
         languages.add("go")
+    # Next.js config
+    for cfg in ["next.config.js", "next.config.ts", "next.config.mjs"]:
+        if (source_path / cfg).exists():
+            detected.add("nextjs")
+    # Spring Boot
+    if list(source_path.rglob("application.properties")) or list(source_path.rglob("application.yml")):
+        detected.add("spring")
 
     return {
         "detected_stack": sorted(detected),

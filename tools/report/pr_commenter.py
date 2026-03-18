@@ -21,18 +21,48 @@ MAX_FINDINGS = 20  # PR 코멘트 길이 제한 방지
 
 # 룰 기반 수정 제안 매핑 (rule_id 부분 매칭 → 수정 가이드)
 FIX_SUGGESTIONS: list[tuple[str, str]] = [
-    ("tainted-sql-string", "파라미터화된 쿼리를 사용하세요: `cursor.execute(\"SELECT ... WHERE id = ?\", (param,))`"),
-    ("sql-injection", "파라미터화된 쿼리를 사용하세요: `cursor.execute(\"SELECT ... WHERE id = ?\", (param,))`"),
-    ("subprocess-injection", "`shell=True`를 제거하고 `shlex.split()`으로 명령어를 분리하세요"),
-    ("dangerous-subprocess", "`shell=True`를 제거하고 인자를 리스트로 전달하세요: `subprocess.run([\"cmd\", \"arg\"])`"),
-    ("subprocess-shell-true", "`shell=True` 대신 `subprocess.run([\"cmd\", \"arg\"])` 형태를 사용하세요"),
-    ("eval-injection", "`eval()` 대신 `ast.literal_eval()` 또는 안전한 파서를 사용하세요"),
-    ("user-eval", "`eval()` 대신 `json.loads()` 또는 `ast.literal_eval()`을 사용하세요"),
-    ("path-traversal", "사용자 입력 경로를 `os.path.realpath()`로 정규화하고 허용 디렉토리 내인지 검증하세요"),
-    ("debug-enabled", "프로덕션에서 `debug=True`를 제거하세요: `debug=os.environ.get('FLASK_DEBUG', False)`"),
-    ("app-run-param-config", "`host=\"0.0.0.0\"` 대신 환경변수로 바인드 주소를 설정하세요"),
-    ("hardcoded_secret", "시크릿을 코드에서 제거하고 환경변수(`os.environ.get()`)나 시크릿 매니저를 사용하세요"),
-    ("openai_key", "API 키를 `.env` 파일이나 GitHub Secrets에 저장하고 `os.environ.get('OPENAI_API_KEY')`로 읽으세요"),
+    # SQL Injection
+    ("tainted-sql-string", "Use parameterized queries: `cursor.execute(\"SELECT ... WHERE id = ?\", (param,))`"),
+    ("sql-injection", "Use parameterized queries instead of string concatenation/f-strings"),
+    # Command Injection
+    ("subprocess-injection", "Remove `shell=True` and use `shlex.split()`: `subprocess.run(shlex.split(cmd))`"),
+    ("dangerous-subprocess", "Pass arguments as a list: `subprocess.run([\"cmd\", \"arg\"])` instead of `shell=True`"),
+    ("subprocess-shell-true", "Replace `shell=True` with `subprocess.run([\"cmd\", \"arg\"])`"),
+    # Code Injection
+    ("eval-injection", "Replace `eval()` with `ast.literal_eval()` or a safe parser"),
+    ("user-eval", "Replace `eval()` with `json.loads()` or `ast.literal_eval()`"),
+    ("exec-injection", "Never pass user input to `exec()`. Use a safe alternative"),
+    # Path Traversal
+    ("path-traversal", "Normalize paths with `os.path.realpath()` and validate against an allowed directory"),
+    # XSS
+    ("xss", "Escape user input before rendering: use framework's built-in escaping (e.g., `markupsafe.escape()`)"),
+    ("dangerously-set-inner-html", "Avoid `dangerouslySetInnerHTML`. Use a sanitizer like DOMPurify if HTML rendering is required"),
+    ("v-html", "Avoid `v-html` with user input. Use text interpolation `{{ }}` instead"),
+    # SSRF
+    ("ssrf", "Validate and allowlist URLs before making requests. Block internal/private IP ranges"),
+    # Debug/Config
+    ("debug-enabled", "Remove `debug=True` in production: `debug=os.environ.get('FLASK_DEBUG', False)`"),
+    ("app-run-param-config", "Don't bind to `0.0.0.0` — use env var for bind address in production"),
+    # Secrets
+    ("hardcoded_secret", "Remove secrets from code. Use environment variables (`os.environ.get()`) or a secret manager"),
+    ("openai_key", "Store API key in `.env` or GitHub Secrets: `os.environ.get('OPENAI_API_KEY')`"),
+    ("aws_key", "Use IAM roles or AWS Secrets Manager instead of hardcoded credentials"),
+    ("github_token", "Use `${{ secrets.GITHUB_TOKEN }}` in workflows, never hardcode tokens"),
+    ("stripe_key", "Store Stripe keys in environment variables, not in source code"),
+    ("jwt_token", "Never hardcode JWT secrets. Use environment variables or a key management service"),
+    # Crypto
+    ("insecure-hash", "Replace MD5/SHA1 with SHA-256 or stronger: `hashlib.sha256()`"),
+    ("weak-random", "Use `secrets.token_hex()` instead of `random` for security-sensitive values"),
+    ("math-random", "Use `crypto.randomBytes()` or `crypto.getRandomValues()` instead of `Math.random()`"),
+    # Deserialization
+    ("insecure-deserialization", "Never deserialize untrusted data with `pickle`/`yaml.load()`. Use `json.loads()` or `yaml.safe_load()`"),
+    ("pickle", "Replace `pickle.loads()` with `json.loads()` for untrusted data"),
+    # JWT
+    ("jwt-none-alg", "Always specify and validate the JWT algorithm. Reject `none` algorithm"),
+    # Open Redirect
+    ("open-redirect", "Validate redirect URLs against an allowlist. Don't redirect to user-supplied URLs"),
+    # CORS
+    ("cors-misconfiguration", "Don't use `Access-Control-Allow-Origin: *` in production. Specify allowed origins"),
 ]
 
 
@@ -50,6 +80,10 @@ FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
     "django": ["python.flask."],
     "fastapi": ["python.django.", "python.flask."],
     "express": ["python.django.", "python.flask."],
+    "nextjs": ["python.django.", "python.flask."],
+    "react": ["python.django.", "python.flask."],
+    "vue": ["python.django.", "python.flask."],
+    "spring": ["python.flask.", "python.django."],
 }
 
 
@@ -139,7 +173,7 @@ def load_secret_findings(secrets_path: str) -> list[dict]:
             "file": s.get("file", ""),
             "line": s.get("line", 0),
             "snippet": s.get("match", ""),
-            "message": f"하드코딩된 시크릿 ({s.get('name', s.get('type', 'secret'))}) — 환경 변수나 시크릿 매니저로 이동하세요",
+            "message": f"Hardcoded secret ({s.get('name', s.get('type', 'secret'))}) — move to environment variables or a secret manager",
         })
     return findings
 
@@ -174,7 +208,7 @@ def format_findings_section(findings: list[dict]) -> str:
     shown = grouped[:MAX_FINDINGS]
     remaining = len(grouped) - len(shown)
 
-    lines = ["", "### 발견된 취약점", ""]
+    lines = ["", "### Findings", ""]
     for f in shown:
         emoji = SEVERITY_EMOJI.get(f["severity"], "\u26aa")
         location = ""
@@ -186,7 +220,7 @@ def format_findings_section(findings: list[dict]) -> str:
 
         # 관련 탐지 수
         related = f.get("related_count", 0)
-        related_tag = f" (+{related}건 관련 탐지)" if related > 0 else ""
+        related_tag = f" (+{related} related)" if related > 0 else ""
 
         # 첫 줄: severity + rule ID + 위치 + related
         lines.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}{related_tag}")
@@ -211,7 +245,7 @@ def format_findings_section(findings: list[dict]) -> str:
         lines.append("")
 
     if remaining > 0:
-        lines.append(f"<sub>외 {remaining}건 생략</sub>")
+        lines.append(f"<sub>+{remaining} more omitted</sub>")
         lines.append("")
 
     return "\n".join(lines)
@@ -252,35 +286,35 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
 
     grade_emoji = {"A": "\U0001f7e2", "B": "\U0001f7e1", "C": "\U0001f7e0", "D": "\U0001f534", "F": "\U0001f534"}.get(grade, "\u26aa")
     cert_badge = " \u2705 **Certified**" if certified else ""
-    cert_block = f"\n> 인증 불가: {block_reason}" if block_reason else ""
+    cert_block = f"\n> Not certified: {block_reason}" if block_reason else ""
 
     if critical > 0:
-        summary = f"Critical 취약점 {critical}개 발견 — 즉시 수정 필요"
+        summary = f"{critical} critical vulnerabilities found — fix immediately"
     elif high > 0:
-        summary = f"High 취약점 {high}개 발견 — 머지 전 수정 권장"
+        summary = f"{high} high vulnerabilities found — fix before merging"
     elif medium > 0:
-        summary = f"Medium 취약점 {medium}개 발견"
+        summary = f"{medium} medium vulnerabilities found"
     elif low > 0:
-        summary = f"Low 취약점 {low}개"
+        summary = f"{low} low vulnerabilities"
     else:
-        summary = "취약점 미발견"
+        summary = "No vulnerabilities found"
 
     lines = [
-        "## \U0001f510 VibeSafe 보안 스캔 결과",
+        "## \U0001f510 VibeSafe Security Scan",
         "",
-        f"{grade_emoji} **{points}/100** (등급 {grade}){cert_badge}",
+        f"{grade_emoji} **{points}/100** (Grade {grade}){cert_badge}",
         cert_block,
         "",
         f"> {summary}",
         "",
-        "| 심각도 | 건수 |",
-        "|--------|------|",
+        "| Severity | Count |",
+        "|----------|-------|",
         f"| \U0001f534 Critical | {critical} |",
         f"| \U0001f7e0 High     | {high} |",
         f"| \U0001f7e1 Medium   | {medium} |",
         f"| \U0001f7e2 Low      | {low} |",
         "",
-        f"도메인: `{domain}` · 총 {total}건",
+        f"Domain: `{domain}` · {total} total",
     ]
     details = format_findings_section(all_findings)
     if details:
@@ -293,7 +327,12 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
     return "\n".join(lines)
 
 
-MARKER = "VibeSafe \ubcf4\uc548 \uc2a4\uce94 \uacb0\uacfc"
+MARKER = "VibeSafe Security Scan"  # Also matches old Korean marker for backward compat
+
+
+def _comment_has_marker(body: str) -> bool:
+    """Check if a comment body contains the VibeSafe marker (new English or old Korean)."""
+    return MARKER in body or "VibeSafe \ubcf4\uc548 \uc2a4\uce94 \uacb0\uacfc" in body
 
 
 def github_api(method: str, url: str, token: str, data: dict | None = None) -> dict:
@@ -318,7 +357,7 @@ def post_or_update_comment(token: str, repo: str, pr_number: int, body: str) -> 
     comments = github_api("GET", api, token)
     existing = None
     for c in comments:
-        if c.get("user", {}).get("login") == "github-actions[bot]" and MARKER in c.get("body", ""):
+        if c.get("user", {}).get("login") == "github-actions[bot]" and _comment_has_marker(c.get("body", "")):
             existing = c
             break
 
