@@ -2,7 +2,7 @@
 
 AI에게 "쇼핑몰 만들어줘"라고 하면 30분 만에 동작하는 앱이 나옵니다. 그런데 그 앱에 SQL Injection, 하드코딩된 API 키, Command Injection이 들어있으면 어떻게 될까요?
 
-실제로 테스트해봤습니다. AI가 생성한 Flask 앱을 보안 스캐너에 돌렸더니 **0/100 F등급**, Critical 1건 + High 5건이 나왔습니다. eval(), subprocess.run(shell=True), f-string SQL 쿼리가 그대로 들어있었습니다.
+실제로 테스트해봤습니다. AI가 생성한 Flask 앱을 보안 스캐너에 돌렸더니 **0/100 F등급**, 총 10건의 취약점(Critical 1 + High 7 + Medium 2)이 나왔습니다. eval(), subprocess.run(shell=True), f-string SQL 쿼리가 그대로 들어있었습니다.
 
 이건 제 앱만의 문제가 아닙니다.
 
