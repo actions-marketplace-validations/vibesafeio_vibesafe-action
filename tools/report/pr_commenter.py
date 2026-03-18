@@ -19,13 +19,26 @@ SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 SEVERITY_MAP = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
 MAX_FINDINGS = 20  # PR 코멘트 길이 제한 방지
 
+# 프레임워크 충돌 맵: key 프레임워크가 감지되면 value의 rule prefix를 오탐으로 제거
+FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
+    "flask": ["python.django."],
+    "django": ["python.flask."],
+    "fastapi": ["python.django.", "python.flask."],
+    "express": ["python.django.", "python.flask."],
+}
 
-def load_sarif_findings(sarif_path: str) -> list[dict]:
+
+def load_sarif_findings(sarif_path: str, detected_stack: list[str] | None = None) -> list[dict]:
     """SARIF 파일에서 개별 취약점 목록을 추출한다."""
     if not os.path.exists(sarif_path):
         return []
     with open(sarif_path) as f:
         data = json.load(f)
+
+    # 프레임워크 충돌 필터: 감지된 스택 기반으로 제외할 rule prefix 목록
+    exclude_prefixes: list[str] = []
+    for framework in (detected_stack or []):
+        exclude_prefixes.extend(FRAMEWORK_CONFLICTS.get(framework, []))
 
     findings: list[dict] = []
     for run in data.get("runs", []):
@@ -43,6 +56,11 @@ def load_sarif_findings(sarif_path: str) -> list[dict]:
 
         for result in run.get("results", []):
             rule_id = result.get("ruleId", "unknown")
+
+            # 프레임워크 충돌 오탐 필터링
+            if any(rule_id.startswith(prefix) for prefix in exclude_prefixes):
+                continue
+
             meta = rule_meta.get(rule_id, {})
 
             # severity 결정
@@ -101,13 +119,35 @@ def load_secret_findings(secrets_path: str) -> list[dict]:
     return findings
 
 
+def group_findings(findings: list[dict]) -> list[dict]:
+    """같은 file:line의 findings를 그룹핑한다. 최고 severity 대표 1건 + related count."""
+    groups: dict[str, list[dict]] = {}
+    for f in findings:
+        key = f"{f['file']}:{f['line']}" if f["file"] else f["rule_id"]
+        groups.setdefault(key, []).append(f)
+
+    grouped: list[dict] = []
+    for _key, group in groups.items():
+        # severity 순 정렬, 최고 severity가 대표
+        group.sort(key=lambda x: SEVERITY_ORDER.get(x["severity"], 99))
+        primary = dict(group[0])
+        related = len(group) - 1
+        if related > 0:
+            primary["related_count"] = related
+        grouped.append(primary)
+
+    grouped.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
+    return grouped
+
+
 def format_findings_section(findings: list[dict]) -> str:
-    """취약점 상세 목록을 마크다운으로 포맷한다."""
+    """취약점 상세 목록을 마크다운으로 포맷한다. 같은 위치의 중복 탐지는 그룹핑."""
     if not findings:
         return ""
 
-    shown = findings[:MAX_FINDINGS]
-    remaining = len(findings) - len(shown)
+    grouped = group_findings(findings)
+    shown = grouped[:MAX_FINDINGS]
+    remaining = len(grouped) - len(shown)
 
     lines = ["", "### 발견된 취약점", ""]
     for f in shown:
@@ -119,8 +159,12 @@ def format_findings_section(findings: list[dict]) -> str:
                 location += f":{f['line']}"
             location += "`"
 
-        # 첫 줄: severity + rule ID + 위치
-        lines.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}")
+        # 관련 탐지 수
+        related = f.get("related_count", 0)
+        related_tag = f" (+{related}건 관련 탐지)" if related > 0 else ""
+
+        # 첫 줄: severity + rule ID + 위치 + related
+        lines.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}{related_tag}")
 
         # 메시지 (한 줄로 축약, 200자 제한)
         msg = f["message"].replace("\n", " ").strip()
@@ -144,7 +188,8 @@ def format_findings_section(findings: list[dict]) -> str:
 
 
 def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
-                       secrets_path: str = "/tmp/secrets.json") -> str:
+                       secrets_path: str = "/tmp/secrets.json",
+                       stack_path: str = "/tmp/stack.json") -> str:
     points = score["score"]
     grade = score["grade"]
     domain = score["domain"]
@@ -189,8 +234,17 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
         f"도메인: `{domain}` · 총 {total}건",
     ]
 
+    # 스택 정보 로드 (프레임워크 충돌 필터링용)
+    detected_stack: list[str] = []
+    if os.path.exists(stack_path):
+        try:
+            with open(stack_path) as f:
+                detected_stack = json.load(f).get("detected_stack", [])
+        except (json.JSONDecodeError, OSError):
+            pass
+
     # 취약점 상세 목록 추가
-    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path)
+    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path, detected_stack)
     all_findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
     details = format_findings_section(all_findings)
     if details:
