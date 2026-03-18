@@ -194,12 +194,31 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
     grade = score["grade"]
     domain = score["domain"]
     certified = score.get("certified", False)
-    critical = score.get("critical", 0)
-    high = score.get("high", 0)
-    medium = score.get("medium", 0)
-    low = score.get("low", 0)
-    total = score.get("total_vulnerabilities", 0)
     block_reason = score.get("certified_block_reason") or ""
+
+    # 스택 정보 로드 (프레임워크 충돌 필터링용)
+    detected_stack: list[str] = []
+    if os.path.exists(stack_path):
+        try:
+            with open(stack_path) as f:
+                detected_stack = json.load(f).get("detected_stack", [])
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # 필터링된 findings에서 실제 카운트 산출 (raw score.json 대신)
+    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path, detected_stack)
+    all_findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
+
+    filtered_counts: dict[str, int] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for finding in all_findings:
+        sev = finding["severity"]
+        if sev in filtered_counts:
+            filtered_counts[sev] += 1
+    critical = filtered_counts["CRITICAL"]
+    high = filtered_counts["HIGH"]
+    medium = filtered_counts["MEDIUM"]
+    low = filtered_counts["LOW"]
+    total = sum(filtered_counts.values())
 
     grade_emoji = {"A": "\U0001f7e2", "B": "\U0001f7e1", "C": "\U0001f7e0", "D": "\U0001f534", "F": "\U0001f534"}.get(grade, "\u26aa")
     cert_badge = " \u2705 **Certified**" if certified else ""
@@ -233,19 +252,6 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
         "",
         f"도메인: `{domain}` · 총 {total}건",
     ]
-
-    # 스택 정보 로드 (프레임워크 충돌 필터링용)
-    detected_stack: list[str] = []
-    if os.path.exists(stack_path):
-        try:
-            with open(stack_path) as f:
-                detected_stack = json.load(f).get("detected_stack", [])
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    # 취약점 상세 목록 추가
-    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path, detected_stack)
-    all_findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
     details = format_findings_section(all_findings)
     if details:
         lines.append(details)
