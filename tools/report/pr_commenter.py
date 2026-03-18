@@ -19,6 +19,31 @@ SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 SEVERITY_MAP = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
 MAX_FINDINGS = 20  # PR 코멘트 길이 제한 방지
 
+# 룰 기반 수정 제안 매핑 (rule_id 부분 매칭 → 수정 가이드)
+FIX_SUGGESTIONS: list[tuple[str, str]] = [
+    ("tainted-sql-string", "파라미터화된 쿼리를 사용하세요: `cursor.execute(\"SELECT ... WHERE id = ?\", (param,))`"),
+    ("sql-injection", "파라미터화된 쿼리를 사용하세요: `cursor.execute(\"SELECT ... WHERE id = ?\", (param,))`"),
+    ("subprocess-injection", "`shell=True`를 제거하고 `shlex.split()`으로 명령어를 분리하세요"),
+    ("dangerous-subprocess", "`shell=True`를 제거하고 인자를 리스트로 전달하세요: `subprocess.run([\"cmd\", \"arg\"])`"),
+    ("subprocess-shell-true", "`shell=True` 대신 `subprocess.run([\"cmd\", \"arg\"])` 형태를 사용하세요"),
+    ("eval-injection", "`eval()` 대신 `ast.literal_eval()` 또는 안전한 파서를 사용하세요"),
+    ("user-eval", "`eval()` 대신 `json.loads()` 또는 `ast.literal_eval()`을 사용하세요"),
+    ("path-traversal", "사용자 입력 경로를 `os.path.realpath()`로 정규화하고 허용 디렉토리 내인지 검증하세요"),
+    ("debug-enabled", "프로덕션에서 `debug=True`를 제거하세요: `debug=os.environ.get('FLASK_DEBUG', False)`"),
+    ("app-run-param-config", "`host=\"0.0.0.0\"` 대신 환경변수로 바인드 주소를 설정하세요"),
+    ("hardcoded_secret", "시크릿을 코드에서 제거하고 환경변수(`os.environ.get()`)나 시크릿 매니저를 사용하세요"),
+    ("openai_key", "API 키를 `.env` 파일이나 GitHub Secrets에 저장하고 `os.environ.get('OPENAI_API_KEY')`로 읽으세요"),
+]
+
+
+def get_fix_suggestion(rule_id: str) -> str | None:
+    """rule_id에 매칭되는 수정 제안을 반환한다."""
+    rule_lower = rule_id.lower()
+    for pattern, suggestion in FIX_SUGGESTIONS:
+        if pattern in rule_lower:
+            return suggestion
+    return None
+
 # 프레임워크 충돌 맵: key 프레임워크가 감지되면 value의 rule prefix를 오탐으로 제거
 FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
     "flask": ["python.django."],
@@ -177,6 +202,11 @@ def format_findings_section(findings: list[dict]) -> str:
         if f["snippet"]:
             snippet_line = f["snippet"].split("\n")[0][:120]
             lines.append(f"> ```\n> {snippet_line}\n> ```")
+
+        # 수정 제안 (있으면)
+        fix = get_fix_suggestion(f["rule_id"])
+        if fix:
+            lines.append(f"> **Fix:** {fix}")
 
         lines.append("")
 

@@ -64,6 +64,18 @@ PR 코멘트는 action이 자동으로 달아줍니다. 별도 설정 불필요.
 
 VibeSafe는 바이브 코더를 위해 만들어졌습니다. 보안팀이 없어도, 24줄이면 충분합니다.
 
+### 공인 벤치마크: OWASP Juice Shop
+
+[OWASP Juice Shop](https://github.com/juice-shop/juice-shop)은 의도적으로 취약하게 만든 공인 테스트 앱입니다.
+
+| 항목 | 결과 |
+|------|------|
+| 스택 탐지 | Express + Socket.io (JS/TS/Python) |
+| SAST 취약점 | 18건 (High 7 + Medium 11) |
+| 노출된 시크릿 | 18건 (JWT 토큰 9 + Supabase 키 9) |
+| **총 탐지** | **36건** |
+| **점수** | **0/100 F등급** |
+
 ---
 
 ## 무엇을 검사하나요
@@ -135,6 +147,21 @@ Critical 취약점이 있으면 머지를 막으려면:
 
 `Settings → Branches → Branch protection rules → Require status checks`
 → **`VibeSafe Security Scan / Security Scan`** 추가
+
+---
+
+## Pre-commit Hook (선택)
+
+커밋 전에 로컬에서 시크릿을 잡고 싶다면:
+
+```bash
+cp tools/pre_commit_hook.py .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+하드코딩된 API 키나 토큰이 staged 파일에 있으면 commit을 차단합니다. Semgrep이 설치되어 있으면 SAST도 함께 실행합니다.
+
+강제 커밋: `git commit --no-verify`
 
 ---
 
