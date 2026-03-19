@@ -90,6 +90,7 @@ Reproduce it yourself: `./test/benchmark_juiceshop.sh`
 |----------|---------|
 | **SAST** | SQL Injection, XSS, SSRF, IDOR, Command Injection, and more (OWASP Top 10) |
 | **Secret Detection** | API keys, GitHub tokens, Stripe keys, AWS credentials, JWT tokens |
+| **SCA (Dependencies)** | Known CVEs in Python (pip-audit) and Node.js (npm audit) packages |
 | **Domain Rules** | Auto-selects security rules based on your service type |
 | **Fix Suggestions** | 32 patterns with actionable remediation for each finding |
 
@@ -141,16 +142,27 @@ Share rules with the community — a YAML file is all it takes. Examples:
 
 ---
 
-## Badge for Your README
+## Dynamic Badge for Your README
 
-After a successful scan, add a VibeSafe badge to your project's README:
+Add an auto-updating VibeSafe badge to your README. Add this step after VibeSafe scan:
 
-```markdown
-<!-- Static badge (update grade manually or via CI) -->
-![VibeSafe](https://img.shields.io/badge/VibeSafe-A%20Certified-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDFMMyA1djZjMCA1LjU1IDMuODQgMTAuNzQgOSAxMiA1LjE2LTEuMjYgOS02LjQ1IDktMTJWNWwtOS00eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==)
+```yaml
+- name: Update VibeSafe badge
+  if: github.ref == 'refs/heads/main'
+  uses: schneegans/dynamic-badges-action@v1.7.0
+  with:
+    auth: ${{ secrets.GIST_SECRET }}
+    gistID: YOUR_GIST_ID
+    filename: vibesafe-badge.json
+    label: VibeSafe
+    message: "${{ steps.vibesafe.outputs.score }}/100 ${{ steps.vibesafe.outputs.grade }}"
+    color: ${{ steps.vibesafe.outputs.grade == 'A' && 'brightgreen' || steps.vibesafe.outputs.grade == 'B' && 'green' || steps.vibesafe.outputs.grade == 'C' && 'yellow' || 'red' }}
 ```
 
-Grades: `A Certified` (brightgreen), `A` (green), `B` (yellow), `C` (orange), `D` / `F` (red)
+Then in your README:
+```markdown
+![VibeSafe](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/YOUR_USER/YOUR_GIST_ID/raw/vibesafe-badge.json)
+```
 
 ---
 

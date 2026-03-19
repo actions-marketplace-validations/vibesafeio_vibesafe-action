@@ -76,11 +76,21 @@ python /vibesafe/tools/scanner/secret_scanner.py \
   || echo '{"secrets":[]}' > /tmp/secrets.json
 echo "::endgroup::"
 
+echo "::group::VibeSafe — Dependency Scan (SCA)"
+python /vibesafe/tools/scanner/sca_scanner.py \
+  --path "$TARGET" \
+  --output /tmp/sca.json \
+  || echo '{"vulnerabilities":[]}' > /tmp/sca.json
+SCA_COUNT=$(python -c "import json; d=json.load(open('/tmp/sca.json')); print(d.get('total', 0))" 2>/dev/null || echo "0")
+echo "Dependency vulnerabilities: $SCA_COUNT"
+echo "::endgroup::"
+
 echo "::group::VibeSafe — Score"
 python /vibesafe/tools/report/score_calculator.py \
   --domain "$DOMAIN" \
   --sast-result /tmp/sast.sarif \
   --secret-result /tmp/secrets.json \
+  --sca-result /tmp/sca.json \
   --stack-file /tmp/stack.json \
   > /tmp/score.json
 cat /tmp/score.json

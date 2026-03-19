@@ -3,8 +3,9 @@ FROM python:3.11-slim
 # git: Semgrep이 git ls-files로 스캔 대상을 찾음 (없으면 RPC error → 0건)
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Semgrep + VibeSafe 도구 의존성 설치
-RUN pip install --no-cache-dir semgrep
+# Semgrep + pip-audit + npm (for SCA)
+RUN apt-get update && apt-get install -y --no-install-recommends npm && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir semgrep pip-audit
 
 WORKDIR /vibesafe
 
@@ -12,6 +13,7 @@ WORKDIR /vibesafe
 COPY tools/scanner/sast_runner.py        tools/scanner/sast_runner.py
 COPY tools/scanner/domain_rule_engine.py tools/scanner/domain_rule_engine.py
 COPY tools/scanner/secret_scanner.py     tools/scanner/secret_scanner.py
+COPY tools/scanner/sca_scanner.py       tools/scanner/sca_scanner.py
 COPY tools/report/score_calculator.py    tools/report/score_calculator.py
 COPY tools/report/pr_commenter.py       tools/report/pr_commenter.py
 
