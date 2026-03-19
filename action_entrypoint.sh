@@ -89,3 +89,28 @@ with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
 echo "::group::VibeSafe — PR Comment"
 python /vibesafe/tools/report/pr_commenter.py /tmp/score.json || echo "PR comment failed (non-fatal)"
 echo "::endgroup::"
+
+# Fail gate: exit non-zero if findings meet the fail-on threshold
+FAIL_ON="${INPUT_FAIL_ON:-critical}"
+if [ "$FAIL_ON" != "none" ]; then
+  python -c "
+import json, sys
+d = json.load(open('/tmp/score.json'))
+fail_on = '$FAIL_ON'.lower()
+severity_levels = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+threshold = severity_levels.get(fail_on, 0)
+
+failed = False
+for sev, level in severity_levels.items():
+    if level <= threshold and d.get(sev, 0) > 0:
+        count = d[sev]
+        print(f'::error::VibeSafe: {count} {sev} vulnerabilities found. Failing because fail-on={fail_on}.')
+        failed = True
+        break
+
+if failed:
+    sys.exit(1)
+else:
+    print(f'VibeSafe: No findings at or above {fail_on} severity. Check passed.')
+"
+fi

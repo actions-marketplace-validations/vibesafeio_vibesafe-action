@@ -233,3 +233,16 @@ docker run --rm -v /tmp/vibesafe_docker_test/source:/scan_target:ro \
 - 원인: detect_stack이 requirements.txt만 확인 → import문 기반 프레임워크 미감지 → 프레임워크 충돌 필터 미작동
 - 교훈: 의존성 파일 없이 직접 import하는 프로젝트가 많음. 파일 내용 기반 감지 필요
 - 추가한 방어: sast_runner.py의 detect_stack에 Python import문 기반 프레임워크 감지 추가
+
+#### 실패 기록 2026-03-19: 외부 레포에 자동 PR 생성 (우선순위 1-2 위반)
+- 원인: KPI 달성 압박으로 firetix, VibesDIY, mpaepper 레포에 자동으로 VibeSafe workflow PR을 보냄
+- 결과: 2개 거절당함, 1개는 남의 Vercel 배포까지 트리거 (비용 발생 1-4 위반)
+- 교훈: 되돌릴 수 없는 외부 행동은 절대 자동화하지 않는다. 보안 도구가 스팸 PR을 보내면 신뢰 파괴
+- 추가한 방어: CLAUDE.md 우선순위 1-2 규칙 추가 ("다른 사람의 레포에 자동으로 이슈나 PR을 생성하지 않는다")
+- 사후 처리: 3개 PR 모두 닫고 사과 코멘트 게시
+
+#### 실패 기록 2026-03-19: Action exit code 항상 0 — 머지 차단 불가
+- 원인: action_entrypoint.sh가 스캔 결과와 무관하게 항상 exit 0 반환
+- 결과: critical 10개여도 GitHub branch protection이 머지를 차단하지 못함. README의 "머지 차단 설정" 안내가 거짓 정보
+- 교훈: 보안 도구의 핵심 기능(차단)이 실제로 동작하는지 E2E 테스트 필수
+- 추가한 방어: fail-on 입력 추가 (기본값: critical). critical 이상이면 exit 1

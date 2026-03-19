@@ -141,12 +141,29 @@ domain: education   # 학생정보 — FERPA, COPPA
 
 ---
 
-## 머지 차단 설정 (선택)
+## Merge Blocking
 
-Critical 취약점이 있으면 머지를 막으려면:
+**By default, VibeSafe fails the check (exit 1) when critical vulnerabilities are found.** This means GitHub branch protection will block the merge automatically.
 
-`Settings → Branches → Branch protection rules → Require status checks`
-→ **`VibeSafe Security Scan / Security Scan`** 추가
+Configure the threshold with `fail-on`:
+
+```yaml
+- uses: vibesafeio/vibesafe-action@v0
+  with:
+    domain: auto
+    fail-on: high     # Block on high or critical (default: critical)
+    # fail-on: none   # Never block, comment only
+```
+
+| `fail-on` | Blocks merge when |
+|-----------|-------------------|
+| `critical` (default) | Critical >= 1 |
+| `high` | High >= 1 or Critical >= 1 |
+| `medium` | Medium >= 1 or above |
+| `low` | Any finding |
+| `none` | Never (comment only) |
+
+To enable: `Settings → Branches → Branch protection rules → Require status checks` → add **`Security Scan`**
 
 ---
 

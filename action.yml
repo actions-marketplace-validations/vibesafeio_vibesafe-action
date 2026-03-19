@@ -1,5 +1,5 @@
 name: "VibeSafe Security Scan"
-description: "AI 생성 코드의 보안 취약점을 스캔하고 PR에 점수를 코멘트합니다."
+description: "Scan AI-generated code for security vulnerabilities and post results as PR comments."
 author: "VibeSafe"
 
 branding:
@@ -8,44 +8,48 @@ branding:
 
 inputs:
   path:
-    description: "스캔할 소스 코드 경로 (기본값: 레포 루트)"
+    description: "Source code path to scan (default: repo root)"
     required: false
     default: "."
   domain:
-    description: "서비스 도메인 (ecommerce|game|platform|healthcare|fintech|education|auto)"
+    description: "Service domain (ecommerce|game|platform|healthcare|fintech|education|auto)"
     required: false
     default: "auto"
+  fail-on:
+    description: "Fail the check (exit 1) when findings at this severity or above exist. Options: critical, high, medium, low, none. Default: critical"
+    required: false
+    default: "critical"
 
 outputs:
   score:
-    description: "보안 점수 (0-100)"
+    description: "Security score (0-100)"
     value: ${{ steps.scan.outputs.score }}
   grade:
-    description: "보안 등급 (A-F)"
+    description: "Security grade (A-F)"
     value: ${{ steps.scan.outputs.grade }}
   domain:
-    description: "감지된 서비스 도메인"
+    description: "Detected service domain"
     value: ${{ steps.scan.outputs.domain }}
   certified:
-    description: "Certified 배지 발급 여부 (true/false)"
+    description: "Whether Certified badge is issued (true/false)"
     value: ${{ steps.scan.outputs.certified }}
   critical:
-    description: "Critical 취약점 수"
+    description: "Number of critical vulnerabilities"
     value: ${{ steps.scan.outputs.critical }}
   high:
-    description: "High 취약점 수"
+    description: "Number of high vulnerabilities"
     value: ${{ steps.scan.outputs.high }}
   medium:
-    description: "Medium 취약점 수"
+    description: "Number of medium vulnerabilities"
     value: ${{ steps.scan.outputs.medium }}
   low:
-    description: "Low 취약점 수"
+    description: "Number of low vulnerabilities"
     value: ${{ steps.scan.outputs.low }}
   total:
-    description: "전체 취약점 수"
+    description: "Total number of vulnerabilities"
     value: ${{ steps.scan.outputs.total }}
   certified_block_reason:
-    description: "Certified 미발급 사유 (발급된 경우 빈 문자열)"
+    description: "Reason for not issuing Certified badge (empty if certified)"
     value: ${{ steps.scan.outputs.certified_block_reason }}
 
 runs:
@@ -54,4 +58,5 @@ runs:
   env:
     INPUT_PATH: ${{ inputs.path }}
     INPUT_DOMAIN: ${{ inputs.domain }}
+    INPUT_FAIL_ON: ${{ inputs.fail-on }}
     GITHUB_TOKEN: ${{ github.token }}
