@@ -184,14 +184,19 @@ def get_ruleset(
     domain: str,
     detected_stack: list[str] | None = None,
     languages: list[str] | None = None,
+    custom_rules: list[str] | None = None,
 ) -> dict:
-    """도메인, 기술 스택, 감지된 언어에 맞는 Semgrep 규칙셋을 반환한다."""
+    """도메인, 기술 스택, 감지된 언어에 맞는 Semgrep 규칙셋을 반환한다.
+    custom_rules: 사용자가 지정한 추가 Semgrep config 경로/URL 목록."""
     if domain not in DOMAIN_RULESETS:
         # 알 수 없는 도메인 → 범용 규칙셋
+        base_configs = ["p/owasp-top-ten", "p/secrets"]
+        if custom_rules:
+            base_configs.extend(custom_rules)
         return {
             "domain": domain,
-            "semgrep_configs": ["p/owasp-top-ten", "p/secrets"],
-            "custom_rules": None,
+            "semgrep_configs": base_configs,
+            "custom_rules": custom_rules,
             "regulations": [],
             "fallback": True,
         }
@@ -221,10 +226,16 @@ def get_ruleset(
         if "prisma" in detected_stack:
             configs.add("p/javascript")
 
+    # 사용자 커스텀 룰 추가
+    if custom_rules:
+        for cr in custom_rules:
+            configs.add(cr)
+
     ruleset["semgrep_configs"] = sorted(configs)
     ruleset["domain"] = domain
     ruleset["detected_stack"] = detected_stack or []
     ruleset["languages"] = sorted(langs)
+    ruleset["custom_rules"] = custom_rules or []
     return ruleset
 
 
@@ -287,6 +298,7 @@ def main():
     parser.add_argument("--path", help="소스 코드 경로 (classify 시 필수)")
     parser.add_argument("--stack", help="탐지된 기술 스택 (쉼표 구분)")
     parser.add_argument("--languages", help="탐지된 언어 (쉼표 구분)")
+    parser.add_argument("--custom-rules", help="추가 Semgrep configs (쉼표 구분, 예: p/react,./my-rules.yml)")
     args = parser.parse_args()
 
     if args.validate:
@@ -295,13 +307,14 @@ def main():
         sys.exit(0 if result["valid"] else 1)
     elif args.classify:
         if not args.path:
-            print(json.dumps({"error": "--path 가 필요합니다"}))
+            print(json.dumps({"error": "--path required"}))
             sys.exit(1)
         result = classify_domain(Path(args.path))
     else:
         stack = [s.strip() for s in args.stack.split(",")] if args.stack else []
         langs = [l.strip() for l in args.languages.split(",")] if args.languages else []
-        result = get_ruleset(args.domain, stack, langs)
+        custom = [c.strip() for c in args.custom_rules.split(",")] if args.custom_rules else []
+        result = get_ruleset(args.domain, stack, langs, custom)
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

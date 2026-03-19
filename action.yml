@@ -19,6 +19,10 @@ inputs:
     description: "Fail the check (exit 1) when findings at this severity or above exist. Options: critical, high, medium, low, none. Default: critical"
     required: false
     default: "critical"
+  custom-rules:
+    description: "Additional Semgrep configs (comma-separated). Can be registry packs (p/react), local YAML paths, or URLs to custom rule files."
+    required: false
+    default: ""
 
 outputs:
   score:
@@ -59,4 +63,5 @@ runs:
     INPUT_PATH: ${{ inputs.path }}
     INPUT_DOMAIN: ${{ inputs.domain }}
     INPUT_FAIL_ON: ${{ inputs.fail-on }}
+    INPUT_CUSTOM_RULES: ${{ inputs.custom-rules }}
     GITHUB_TOKEN: ${{ github.token }}

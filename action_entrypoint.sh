@@ -7,6 +7,7 @@ git config --global --add safe.directory "${GITHUB_WORKSPACE:-/github/workspace}
 
 TARGET="${INPUT_PATH:-.}"
 DOMAIN="${INPUT_DOMAIN:-auto}"
+CUSTOM_RULES="${INPUT_CUSTOM_RULES:-}"
 
 echo "::group::VibeSafe — Stack Detection"
 
@@ -28,10 +29,15 @@ echo "Domain: $DOMAIN"
 STACK=$(python -c "import json; d=json.load(open('/tmp/stack.json')); print(','.join(d.get('detected_stack', [])))")
 LANGS=$(python -c "import json; d=json.load(open('/tmp/stack.json')); print(','.join(d.get('languages', [])))")
 echo "Languages: $LANGS"
+CUSTOM_RULES_ARG=""
+if [ -n "$CUSTOM_RULES" ]; then
+  CUSTOM_RULES_ARG="--custom-rules $CUSTOM_RULES"
+fi
 python /vibesafe/tools/scanner/domain_rule_engine.py \
   --domain "$DOMAIN" \
   --stack "$STACK" \
   --languages "$LANGS" \
+  $CUSTOM_RULES_ARG \
   > /tmp/ruleset.json
 echo "Rules: $(python -c "import json; print(json.load(open('/tmp/ruleset.json'))['semgrep_configs'])")"
 

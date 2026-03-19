@@ -111,6 +111,37 @@ domain: education   # Student data — FERPA, COPPA
 
 ---
 
+## Custom Rules
+
+Add your own Semgrep rules on top of VibeSafe's defaults:
+
+```yaml
+- uses: vibesafeio/vibesafe-action@v0
+  with:
+    domain: auto
+    custom-rules: "./my-rules.yml,p/react,https://example.com/team-rules.yml"
+```
+
+Share rules with the community — a YAML file is all it takes. Examples:
+- `p/react` — React-specific rules from Semgrep registry
+- `./security/fintech-rules.yml` — your team's custom rules
+- URL to a shared ruleset
+
+---
+
+## Badge for Your README
+
+After a successful scan, add a VibeSafe badge to your project's README:
+
+```markdown
+<!-- Static badge (update grade manually or via CI) -->
+![VibeSafe](https://img.shields.io/badge/VibeSafe-A%20Certified-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDFMMyA1djZjMCA1LjU1IDMuODQgMTAuNzQgOSAxMiA1LjE2LTEuMjYgOS02LjQ1IDktMTJWNWwtOS00eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==)
+```
+
+Grades: `A Certified` (brightgreen), `A` (green), `B` (yellow), `C` (orange), `D` / `F` (red)
+
+---
+
 ## Scoring
 
 | Grade | Score | Meaning |
