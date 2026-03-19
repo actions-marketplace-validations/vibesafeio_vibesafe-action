@@ -48,10 +48,9 @@ RULES=$(python -c "import json; d=json.load(open('/tmp/ruleset.json')); print(',
 echo "Target: $TARGET ($(find "$TARGET" -name '*.py' -o -name '*.js' -o -name '*.ts' 2>/dev/null | wc -l) source files)"
 
 # Diff-only mode: only report NEW findings introduced by this PR
-# Uses Semgrep --baseline-commit to compare against base branch
+# Uses Semgrep --baseline-commit (requires Semgrep Pro; falls back to full scan)
 BASELINE_ARG=""
 if [ -n "${GITHUB_BASE_REF:-}" ]; then
-  # Fetch base branch for diff comparison
   git fetch origin "$GITHUB_BASE_REF" --depth=1 2>/dev/null || true
   BASELINE_COMMIT=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "")
   if [ -n "$BASELINE_COMMIT" ]; then
@@ -60,12 +59,30 @@ if [ -n "${GITHUB_BASE_REF:-}" ]; then
   fi
 fi
 
-python /vibesafe/tools/scanner/sast_runner.py \
-  --path "$TARGET" \
-  --rules "$RULES" \
-  --output /tmp/sast.sarif \
-  --timeout 120 \
-  $BASELINE_ARG
+# Try diff-only first, fall back to full scan if baseline not supported
+if [ -n "$BASELINE_ARG" ]; then
+  python /vibesafe/tools/scanner/sast_runner.py \
+    --path "$TARGET" \
+    --rules "$RULES" \
+    --output /tmp/sast.sarif \
+    --timeout 120 \
+    $BASELINE_ARG \
+    2>/dev/null || {
+    echo "Diff mode not available (requires Semgrep Pro). Falling back to full scan."
+    BASELINE_ARG=""
+    python /vibesafe/tools/scanner/sast_runner.py \
+      --path "$TARGET" \
+      --rules "$RULES" \
+      --output /tmp/sast.sarif \
+      --timeout 120
+  }
+else
+  python /vibesafe/tools/scanner/sast_runner.py \
+    --path "$TARGET" \
+    --rules "$RULES" \
+    --output /tmp/sast.sarif \
+    --timeout 120
+fi
 echo "SARIF findings: $(python -c "import json; d=json.load(open('/tmp/sast.sarif')); print(sum(len(r.get('results',[])) for r in d.get('runs',[])))" 2>/dev/null || echo 'N/A')"
 echo "::endgroup::"
 
