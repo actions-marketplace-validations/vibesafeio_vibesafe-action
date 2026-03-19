@@ -44,7 +44,12 @@ echo "Rules: $(python -c "import json; print(json.load(open('/tmp/ruleset.json')
 echo "::endgroup::"
 
 echo "::group::VibeSafe — SAST Scan"
+# Combine domain rules + VibeSafe custom rules
 RULES=$(python -c "import json; d=json.load(open('/tmp/ruleset.json')); print(','.join(d.get('semgrep_configs', ['p/owasp-top-ten'])))")
+# Add VibeSafe's own vibe-coding ruleset (AI-generated code patterns)
+if [ -f /vibesafe/rules/vibe-coding.yml ]; then
+  RULES="$RULES,/vibesafe/rules/vibe-coding.yml"
+fi
 echo "Target: $TARGET ($(find "$TARGET" -name '*.py' -o -name '*.js' -o -name '*.ts' 2>/dev/null | wc -l) source files)"
 
 # Diff-only mode: only report NEW findings introduced by this PR

@@ -1,0 +1,120 @@
+rules:
+  # ===== AI-Generated Code Common Vulnerabilities =====
+  # These patterns appear frequently in vibe-coded apps but are not
+  # well-covered by standard Semgrep packs.
+
+  - id: vibesafe.hardcoded-cors-wildcard
+    patterns:
+      - pattern-either:
+          - pattern: |
+              Access-Control-Allow-Origin: "*"
+          - pattern: |
+              "Access-Control-Allow-Origin": "*"
+          - pattern: |
+              cors({origin: "*"})
+          - pattern: |
+              cors(origins="*")
+          - pattern: |
+              CORS(app, resources={..., "origins": "*"})
+    message: >
+      CORS is configured to allow all origins (*). This allows any website
+      to make requests to your API, potentially exposing user data.
+      Restrict origins to your frontend domain.
+    languages: [python, javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [web]
+      cwe: "CWE-942: Overly Permissive Cross-domain Whitelist"
+      vibesafe-fix: "Restrict CORS origins to your frontend domain: cors({origin: 'https://yourdomain.com'})"
+
+  - id: vibesafe.flask-debug-production
+    pattern: app.run(..., debug=True, ...)
+    message: >
+      Flask app running with debug=True. This exposes the Werkzeug debugger
+      which allows arbitrary code execution. Never use debug=True in production.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-489: Active Debug Code"
+      vibesafe-fix: "Use debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'"
+
+  - id: vibesafe.jwt-no-expiry
+    patterns:
+      - pattern: jwt.encode($PAYLOAD, ...)
+      - pattern-not: jwt.encode({..., "exp": ..., ...}, ...)
+    message: >
+      JWT token created without expiration time. Tokens without expiry never
+      become invalid, so a leaked token grants permanent access.
+      Always include an 'exp' claim.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-613: Insufficient Session Expiration"
+      vibesafe-fix: "Add expiry: jwt.encode({...payload, 'exp': datetime.utcnow() + timedelta(hours=1)}, secret)"
+
+  - id: vibesafe.express-no-helmet
+    patterns:
+      - pattern: |
+          const app = express()
+      - pattern-not-inside: |
+          ...
+          app.use(helmet())
+          ...
+    message: >
+      Express app without Helmet middleware. Helmet sets security headers
+      (CSP, HSTS, X-Frame-Options) that prevent common attacks.
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [express]
+      vibesafe-fix: "Install helmet: npm i helmet, then add app.use(helmet()) before routes"
+
+  - id: vibesafe.password-comparison-timing
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if $PASSWORD == $INPUT: ...
+          - pattern: |
+              if $INPUT == $PASSWORD: ...
+          - pattern: |
+              $PASSWORD === $INPUT
+          - pattern: |
+              $INPUT === $PASSWORD
+    message: >
+      Password compared using == or ===. This is vulnerable to timing attacks.
+      Use a constant-time comparison function instead.
+    languages: [python, javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-208: Observable Timing Discrepancy"
+      vibesafe-fix: "Python: hmac.compare_digest(). Node.js: crypto.timingSafeEqual()"
+
+  - id: vibesafe.supabase-anon-key-in-code
+    pattern-regex: "eyJ[A-Za-z0-9_-]{30,}\\.eyJ[A-Za-z0-9_-]{30,}\\.[-A-Za-z0-9_]+"
+    paths:
+      include:
+        - "*.ts"
+        - "*.tsx"
+        - "*.js"
+        - "*.jsx"
+    message: >
+      Supabase anon/service key found in source code. While anon keys are
+      meant to be public, service_role keys should never be in client code.
+      Use environment variables for all Supabase keys.
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      technology: [supabase]
+      vibesafe-fix: "Move to env var: const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)"
