@@ -45,12 +45,27 @@ echo "::endgroup::"
 
 echo "::group::VibeSafe — SAST Scan"
 RULES=$(python -c "import json; d=json.load(open('/tmp/ruleset.json')); print(','.join(d.get('semgrep_configs', ['p/owasp-top-ten'])))")
-echo "Target: $TARGET ($(find "$TARGET" -name '*.py' -o -name '*.js' -o -name '*.ts' | wc -l) source files)"
+echo "Target: $TARGET ($(find "$TARGET" -name '*.py' -o -name '*.js' -o -name '*.ts' 2>/dev/null | wc -l) source files)"
+
+# Diff-only mode: only report NEW findings introduced by this PR
+# Uses Semgrep --baseline-commit to compare against base branch
+BASELINE_ARG=""
+if [ -n "${GITHUB_BASE_REF:-}" ]; then
+  # Fetch base branch for diff comparison
+  git fetch origin "$GITHUB_BASE_REF" --depth=1 2>/dev/null || true
+  BASELINE_COMMIT=$(git rev-parse "origin/$GITHUB_BASE_REF" 2>/dev/null || echo "")
+  if [ -n "$BASELINE_COMMIT" ]; then
+    BASELINE_ARG="--baseline-commit $BASELINE_COMMIT"
+    echo "Diff mode: comparing against $GITHUB_BASE_REF ($BASELINE_COMMIT)"
+  fi
+fi
+
 python /vibesafe/tools/scanner/sast_runner.py \
   --path "$TARGET" \
   --rules "$RULES" \
   --output /tmp/sast.sarif \
-  --timeout 120
+  --timeout 120 \
+  $BASELINE_ARG
 echo "SARIF findings: $(python -c "import json; d=json.load(open('/tmp/sast.sarif')); print(sum(len(r.get('results',[])) for r in d.get('runs',[])))" 2>/dev/null || echo 'N/A')"
 echo "::endgroup::"
 

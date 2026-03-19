@@ -111,6 +111,18 @@ domain: education   # Student data — FERPA, COPPA
 
 ---
 
+## Diff-Only Scanning
+
+**VibeSafe automatically scans only new code introduced by the PR** — not the entire repo. This means:
+- Faster scans (seconds, not minutes)
+- No noise from pre-existing issues
+- Only shows vulnerabilities YOU introduced
+- Works automatically when triggered by `pull_request` events
+
+This is the same `--baseline-commit` approach used by Semgrep's paid tier, but free.
+
+---
+
 ## Custom Rules
 
 Add your own Semgrep rules on top of VibeSafe's defaults:

@@ -156,8 +156,10 @@ def detect_stack(source_path: Path) -> dict:
     }
 
 
-def run_semgrep(source_path: Path, rule_ids: list[str], output_file: Path, timeout: int = 180) -> dict:
-    """Semgrep을 실행하고 SARIF 결과를 저장한다."""
+def run_semgrep(source_path: Path, rule_ids: list[str], output_file: Path,
+                timeout: int = 180, baseline_commit: str | None = None) -> dict:
+    """Semgrep을 실행하고 SARIF 결과를 저장한다.
+    baseline_commit: 지정하면 해당 커밋 이후 새로 추가된 findings만 보고 (diff-only mode)."""
     configs = rule_ids if rule_ids else ["auto"]
     cmd = ["semgrep"]
     for config in configs:
@@ -167,8 +169,10 @@ def run_semgrep(source_path: Path, rule_ids: list[str], output_file: Path, timeo
         "--output", str(output_file),
         "--timeout", str(timeout),
         "--max-memory", "2048",
-        str(source_path),
     ]
+    if baseline_commit:
+        cmd += ["--baseline-commit", baseline_commit]
+    cmd.append(str(source_path))
 
     # stderr=STDOUT: Semgrep이 stderr를 pipe로 받으면 원격 규칙셋 로드에 실패(exit 7).
     # stderr를 stdout에 합쳐서 캡처하면 이 문제가 없다.
@@ -227,11 +231,12 @@ def main():
     parser.add_argument("--rules", help="적용할 Semgrep 규칙 ID (쉼표 구분)")
     parser.add_argument("--output", default=None, help="SARIF 결과 파일 경로")
     parser.add_argument("--timeout", type=int, default=180, help="스캔 타임아웃 (초)")
+    parser.add_argument("--baseline-commit", default=None, help="Diff-only mode: only report findings added after this commit")
     args = parser.parse_args()
 
     source_path = Path(args.path)
     if not source_path.exists():
-        print(json.dumps({"error": f"경로를 찾을 수 없습니다: {args.path}"}))
+        print(json.dumps({"error": f"Path not found: {args.path}"}))
         sys.exit(1)
 
     if args.detect_stack:
@@ -239,11 +244,11 @@ def main():
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return
 
-    # SAST 스캔 실행
+    # SAST scan
     output_file = Path(args.output) if args.output else source_path.parent / "sast.sarif"
     rule_ids = [r.strip() for r in args.rules.split(",")] if args.rules else []
 
-    scan_result = run_semgrep(source_path, rule_ids, output_file, args.timeout)
+    scan_result = run_semgrep(source_path, rule_ids, output_file, args.timeout, args.baseline_commit)
 
     # 디버그: Semgrep 실행 정보 (stderr=stdout merged)
     semgrep_log = scan_result["stdout"] or ""
