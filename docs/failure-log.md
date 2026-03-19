@@ -23,3 +23,9 @@ When a bug is found, add an entry here. When patterns repeat, add to Phase 2 che
 - **Result**: README said "set as required check to block merges" but it never actually blocked
 - **Lesson**: Core security feature (blocking) must be E2E tested. README claims must match behavior.
 - **Defense added**: `fail-on` input (default: critical). exit 1 when threshold exceeded.
+
+## 2026-03-20: Semgrep --baseline-commit requires Pro (OSS exit 2)
+- **Root cause**: Assumed --baseline-commit works in Semgrep OSS. It's a Pro-only feature.
+- **Result**: SAST scan failed entirely (exit 2), no findings, no PR comment update
+- **Lesson**: Always check if CLI features are available in the free tier before using in production
+- **Defense added**: Try-catch in entrypoint — try baseline first, fall back to full scan on failure
