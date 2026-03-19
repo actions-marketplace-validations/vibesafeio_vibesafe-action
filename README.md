@@ -1,26 +1,29 @@
 # VibeSafe Security Scan · GitHub Action
 
-> PR마다 자동으로 보안을 검사하고, 결과를 코멘트로 달아줍니다.
+[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-vibesafe--action-blue?logo=github)](https://github.com/vibesafeio/vibesafe-action)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-바이브 코딩(AI 생성 코드)에서 자주 나타나는 SQL Injection, XSS, 하드코딩된 API 키 등을 PR 단계에서 잡아냅니다.
+> **Free, open-source security scanner for AI-generated code.** SAST + secret detection on every PR, with fix suggestions. 24-line YAML, 30-second setup.
+
+Catches SQL Injection, XSS, hardcoded API keys, command injection, and more in vibe-coded apps — before they reach production.
 
 ---
 
-## 실제 PR 코멘트 예시
+## PR Comment Examples
 
-**취약점 없음 — A등급 Certified**
+**No vulnerabilities — Grade A Certified**
 
 ![Clean result](./docs/screenshot-clean.png)
 
-**취약점 발견 — F등급**
+**Vulnerabilities found — Grade F**
 
 ![Vulnerable result](./docs/screenshot-vuln.png)
 
 ---
 
-## 설치 (30초)
+## Install (30 seconds)
 
-`.github/workflows/vibesafe-scan.yml` 파일 하나 추가하면 끝입니다.
+Add one file: `.github/workflows/vibesafe-scan.yml`
 
 ```yaml
 name: VibeSafe Security Scan
@@ -48,7 +51,7 @@ jobs:
           domain: auto
 ```
 
-PR 코멘트는 action이 자동으로 달아줍니다. 별도 설정 불필요.
+PR comments are posted automatically. No extra configuration needed.
 
 ---
 
@@ -56,96 +59,97 @@ PR 코멘트는 action이 자동으로 달아줍니다. 별도 설정 불필요.
 
 | | VibeSafe | Snyk | CodeQL | Dependabot |
 |---|---|---|---|---|
-| 설치 시간 | **30초** (YAML 복사) | 30분+ (계정+API키+CLI) | 15분+ (빌드 설정) | 자동 (PR만) |
-| 비용 | **무료** | $35K~$90K/년 | 무료 (공개 레포) | 무료 |
-| PR 코멘트 | **파일+줄+코드+수정가이드** | 파일+줄 | ❌ | ❌ |
-| 바이브 코딩 최적화 | **도메인별 규칙** | ❌ | ❌ | ❌ |
-| 시크릿 스캔 | ✅ | ✅ (유료) | ❌ | ❌ |
+| Setup time | **30 seconds** (copy YAML) | 30min+ (account+API key+CLI) | 15min+ (build config) | Auto (deps only) |
+| Cost | **Free** | $35K~$90K/yr | Free (public repos) | Free |
+| PR comments | **File+line+code+fix guide** | File+line | ❌ | ❌ |
+| Vibe coding optimized | **Domain-specific rules** | ❌ | ❌ | ❌ |
+| Secret scanning | ✅ | ✅ (paid) | ❌ | ❌ |
+| Merge blocking | ✅ `fail-on` | ✅ | ✅ | ❌ |
 
-VibeSafe는 바이브 코더를 위해 만들어졌습니다. 보안팀이 없어도, 24줄이면 충분합니다.
+Built for vibe coders. No security team needed — 24 lines is all it takes.
 
-### 공인 벤치마크: OWASP Juice Shop
+### OWASP Juice Shop Benchmark
 
-[OWASP Juice Shop](https://github.com/juice-shop/juice-shop)은 의도적으로 취약하게 만든 공인 테스트 앱입니다.
+[OWASP Juice Shop](https://github.com/juice-shop/juice-shop) is a deliberately vulnerable test application.
 
-| 항목 | 결과 |
-|------|------|
-| 스택 탐지 | Express + Socket.io (JS/TS/Python) |
-| SAST 취약점 | 18건 (High 7 + Medium 11) |
-| 노출된 시크릿 | 18건 (JWT 토큰 9 + Supabase 키 9) |
-| **총 탐지** | **36건** |
-| **점수** | **0/100 F등급** |
+| Metric | Result |
+|--------|--------|
+| Stack detected | Express + Socket.io (JS/TS/Python) |
+| SAST findings | 18 (High 7 + Medium 11) |
+| Exposed secrets | 18 (JWT tokens 9 + Supabase keys 9) |
+| **Total findings** | **36** |
+| **Score** | **0/100 Grade F** |
 
----
-
-## 무엇을 검사하나요
-
-| 항목 | 내용 |
-|------|------|
-| **SAST** | SQL Injection, XSS, SSRF, IDOR, Command Injection 등 OWASP Top 10 |
-| **시크릿 탐지** | API 키, GitHub 토큰, Stripe 키, AWS 자격증명 하드코딩 |
-| **도메인별 규칙** | 서비스 유형에 맞는 보안 규칙 자동 선택 |
-
-지원 언어: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
+Reproduce it yourself: `./test/benchmark_juiceshop.sh`
 
 ---
 
-## 도메인 옵션
+## What It Scans
+
+| Category | Details |
+|----------|---------|
+| **SAST** | SQL Injection, XSS, SSRF, IDOR, Command Injection, and more (OWASP Top 10) |
+| **Secret Detection** | API keys, GitHub tokens, Stripe keys, AWS credentials, JWT tokens |
+| **Domain Rules** | Auto-selects security rules based on your service type |
+| **Fix Suggestions** | 32 patterns with actionable remediation for each finding |
+
+Supported languages: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
+
+---
+
+## Domain Options
 
 ```yaml
-domain: auto        # 코드를 분석해서 자동 분류 (기본값)
-domain: ecommerce   # 결제/주문 — PCI DSS 룰 강화
-domain: fintech     # 계좌/송금 — 전자금융거래법, AML
-domain: healthcare  # 환자정보 — HIPAA, 개인정보보호법
-domain: platform    # SaaS/멀티테넌트 — JWT, RBAC
-domain: game        # 게임서버 — WebSocket, 클라이언트 조작
-domain: education   # 학생정보 — FERPA, COPPA
+domain: auto        # Auto-detect from code analysis (default)
+domain: ecommerce   # Payments/orders — PCI DSS rules
+domain: fintech     # Banking/transfers — AML rules
+domain: healthcare  # Patient data — HIPAA rules
+domain: platform    # SaaS/multi-tenant — JWT, RBAC
+domain: game        # Game servers — WebSocket, client tampering
+domain: education   # Student data — FERPA, COPPA
 ```
 
 ---
 
-## 점수 기준
+## Scoring
 
-| 등급 | 점수 | 의미 |
-|------|------|------|
-| 🟢 **A** + ✅ Certified | 85 ~ 100 | Critical · High 0개 |
-| 🟢 **A** | 85 ~ 100 | 양호 |
-| 🟡 **B** | 70 ~ 84 | 경미한 취약점 |
-| 🟠 **C** | 50 ~ 69 | Medium 취약점 다수 |
-| 🔴 **D / F** | 0 ~ 49 | Critical · High 존재 |
+| Grade | Score | Meaning |
+|-------|-------|---------|
+| 🟢 **A** + ✅ Certified | 85 – 100 | No Critical or High findings |
+| 🟢 **A** | 85 – 100 | Good |
+| 🟡 **B** | 70 – 84 | Minor vulnerabilities |
+| 🟠 **C** | 50 – 69 | Multiple medium findings |
+| 🔴 **D / F** | 0 – 49 | Critical or High findings present |
 
-**✅ Certified** 배지는 Critical 0 + High 0 + 점수 85 이상일 때 발급됩니다.
+**✅ Certified** badge is issued when Critical = 0, High = 0, and score >= 85.
 
 ---
 
 ## Outputs
 
-다른 step에서 결과를 활용할 수 있습니다.
+Use scan results in downstream steps:
 
 ```yaml
 - run: echo "Score: ${{ steps.vibesafe.outputs.score }}"
 ```
 
-| output | 설명 | 예시 |
-|--------|------|------|
-| `score` | 보안 점수 | `82` |
-| `grade` | 등급 | `B` |
-| `domain` | 감지된 도메인 | `fintech` |
-| `certified` | Certified 여부 | `true` |
-| `critical` | Critical 취약점 수 | `0` |
-| `high` | High 취약점 수 | `2` |
-| `medium` | Medium 취약점 수 | `5` |
-| `low` | Low 취약점 수 | `3` |
-| `total` | 전체 취약점 수 | `10` |
-| `certified_block_reason` | Certified 미발급 사유 | `high >= 1` |
+| Output | Description | Example |
+|--------|-------------|---------|
+| `score` | Security score (0-100) | `82` |
+| `grade` | Grade (A-F) | `B` |
+| `domain` | Detected domain | `fintech` |
+| `certified` | Certified badge issued | `true` |
+| `critical` | Critical count | `0` |
+| `high` | High count | `2` |
+| `medium` | Medium count | `5` |
+| `low` | Low count | `3` |
+| `total` | Total findings | `10` |
 
 ---
 
 ## Merge Blocking
 
-**By default, VibeSafe fails the check (exit 1) when critical vulnerabilities are found.** This means GitHub branch protection will block the merge automatically.
-
-Configure the threshold with `fail-on`:
+**By default, VibeSafe fails the check (exit 1) when critical vulnerabilities are found.** GitHub branch protection will block the merge automatically.
 
 ```yaml
 - uses: vibesafeio/vibesafe-action@v0
@@ -167,24 +171,24 @@ To enable: `Settings → Branches → Branch protection rules → Require status
 
 ---
 
-## Pre-commit Hook (선택)
+## Pre-commit Hook (optional)
 
-커밋 전에 로컬에서 시크릿을 잡고 싶다면:
+Catch secrets locally before they enter git history:
 
 ```bash
 cp tools/pre_commit_hook.py .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
 
-하드코딩된 API 키나 토큰이 staged 파일에 있으면 commit을 차단합니다. Semgrep이 설치되어 있으면 SAST도 함께 실행합니다.
+Blocks commits containing hardcoded API keys or tokens. If Semgrep is installed, SAST runs too.
 
-강제 커밋: `git commit --no-verify`
+Force commit: `git commit --no-verify`
 
 ---
 
-## MCP Server — IDE 실시간 보안 검증 (선택)
+## MCP Server — Real-time IDE Security (optional)
 
-Claude Code나 Cursor에서 코딩 중 실시간으로 시크릿을 감지합니다.
+Detect secrets in real-time while coding in Claude Code or Cursor.
 
 **Claude Code:**
 ```bash
@@ -203,7 +207,7 @@ claude mcp add vibesafe -- python /path/to/vibesafe/tools/mcp_server.py
 }
 ```
 
-AI 에이전트가 코드를 작성할 때 `vibesafe_check_secret`과 `vibesafe_scan_file` 도구를 사용하여 시크릿과 취약점을 즉시 감지합니다.
+Tools: `vibesafe_check_secret` (text scan) and `vibesafe_scan_file` (file scan with fix suggestions).
 
 ---
 
