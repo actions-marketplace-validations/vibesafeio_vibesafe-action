@@ -81,17 +81,20 @@ def get_fix_suggestion(rule_id: str) -> str | None:
             return suggestion
     return None
 
-# 프레임워크 충돌 맵: key 프레임워크가 감지되면 value의 rule prefix를 오탐으로 제거
-FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
-    "flask": ["python.django."],
-    "django": ["python.flask."],
-    "fastapi": ["python.django.", "python.flask."],
-    "express": ["python.django.", "python.flask."],
-    "nextjs": ["python.django.", "python.flask."],
-    "react": ["python.django.", "python.flask."],
-    "vue": ["python.django.", "python.flask."],
-    "spring": ["python.flask.", "python.django."],
-}
+# Import shared constants (DRY — single source of truth)
+try:
+    from tools.shared import FRAMEWORK_CONFLICTS
+except ImportError:
+    # Fallback for Docker where import path differs
+    FRAMEWORK_CONFLICTS: dict[str, list[str]] = {
+        "flask": ["python.django."], "django": ["python.flask."],
+        "fastapi": ["python.django.", "python.flask."],
+        "express": ["python.django.", "python.flask."],
+        "nextjs": ["python.django.", "python.flask."],
+        "react": ["python.django.", "python.flask."],
+        "vue": ["python.django.", "python.flask."],
+        "spring": ["python.flask.", "python.django."],
+    }
 
 
 def load_sarif_findings(sarif_path: str, detected_stack: list[str] | None = None) -> list[dict]:

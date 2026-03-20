@@ -58,6 +58,26 @@ Read this at session start. Do not repeat past mistakes.
 
 ---
 
+## Problem Solving: First Principles Decomposition
+
+Follow this order for every problem:
+
+1. **Strip assumptions** — "we've always done it this way" is not a reason. Dig to the root of WHY.
+2. **Keep only undeniable facts** — Remove guesses, conventions, "usually this works." Keep only verified facts.
+3. **Rebuild from the facts** — Construct the solution from scratch using only what remains.
+
+Apply to:
+- **Bugs**: Find root cause, not symptoms. Not "fix this line" but "why can this class of bug exist?"
+- **Features**: Not "competitors do this" but "what does the user actually need?"
+- **Repeated bugs**: Not individual fixes but structural prevention of the entire bug class.
+
+Project examples:
+- Python 3.9 type hint bug repeated 4x → not individual fixes, but `from __future__ import annotations` on ALL files (structural block)
+- `p/nodejs-security` failed only in Docker → root cause wasn't "wrong pack name" but "no pack validation system" → added `--validate` flag
+- PR comment showed only score → root problem wasn't "make score prettier" but "user doesn't know what to do next" → added findings + fix suggestions
+
+---
+
 ## Hard Rules (Bug Patterns)
 
 ### 1. `from __future__ import annotations` on every Python file
