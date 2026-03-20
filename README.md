@@ -1,29 +1,25 @@
-# VibeSafe Security Scan · GitHub Action
+# VibeSafe — Security Scanner for Vibe-Coded Apps
+
+> **53% of AI-generated code has security vulnerabilities.** VibeSafe catches them before you merge.
+
+![VibeSafe PR Comment](./docs/screenshot-vuln.png)
+
+**What it does on every PR:**
+- Finds SQL injection, XSS, command injection, hardcoded secrets
+- Checks Supabase RLS and Firebase rules (the #1 cause of vibe-coding data breaches)
+- Posts **exact file, line, code, and how to fix it** as a PR comment
+- Blocks merge when critical vulnerabilities are found
+
+**Free. Open source. 30-second setup. No account needed.**
 
 [![GitHub Action](https://img.shields.io/badge/GitHub%20Action-vibesafe--action-blue?logo=github)](https://github.com/vibesafeio/vibesafe-action)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-
-> **Free, open-source security scanner for AI-generated code.** SAST + secret detection on every PR, with fix suggestions. 24-line YAML, 30-second setup.
-
-Catches SQL Injection, XSS, hardcoded API keys, command injection, and more in vibe-coded apps — before they reach production.
-
----
-
-## PR Comment Examples
-
-**No vulnerabilities — Grade A Certified**
-
-![Clean result](./docs/screenshot-clean.png)
-
-**Vulnerabilities found — Grade F**
-
-![Vulnerable result](./docs/screenshot-vuln.png)
 
 ---
 
 ## Install (30 seconds)
 
-Add one file: `.github/workflows/vibesafe-scan.yml`
+Copy this file to `.github/workflows/vibesafe-scan.yml`:
 
 ```yaml
 name: VibeSafe Security Scan
