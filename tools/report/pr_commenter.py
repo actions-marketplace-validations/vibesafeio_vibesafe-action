@@ -350,6 +350,35 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
     if details:
         lines.append(details)
 
+    # Fix prompt for AI assistants (only when findings exist)
+    if all_findings:
+        fix_items = []
+        grouped = group_findings(all_findings)
+        for f in grouped[:10]:
+            loc = f"{f['file']}:{f['line']}" if f.get("file") else ""
+            fix = get_fix_suggestion(f["rule_id"]) or ""
+            fix_items.append(f"- {f['severity']}: {loc} — {fix}" if fix else f"- {f['severity']}: {loc}")
+
+        lines.extend([
+            "",
+            "<details>",
+            "<summary>🤖 <b>Fix with AI — copy this prompt into Cursor/Claude</b></summary>",
+            "",
+            "```",
+            "Fix these security issues in my code:",
+            "",
+        ])
+        lines.extend(fix_items)
+        lines.extend([
+            "",
+            "Move all hardcoded secrets to environment variables.",
+            "Use parameterized queries for SQL. Never use eval() with user input.",
+            "Generate a .env.example with placeholder values.",
+            "```",
+            "",
+            "</details>",
+        ])
+
     lines.extend([
         "",
         "<sub>Powered by [VibeSafe](https://vibesafe.dev)</sub>",

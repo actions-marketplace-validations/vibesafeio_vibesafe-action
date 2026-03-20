@@ -18,6 +18,7 @@ COPY tools/scanner/config_scanner.py    tools/scanner/config_scanner.py
 COPY rules/                             rules/
 COPY tools/report/score_calculator.py    tools/report/score_calculator.py
 COPY tools/report/pr_commenter.py       tools/report/pr_commenter.py
+COPY tools/report/fix_generator.py      tools/report/fix_generator.py
 
 # __init__.py 없으면 import 경로 문제 없음 (CLI 직접 호출)
 RUN mkdir -p tools/scanner tools/report

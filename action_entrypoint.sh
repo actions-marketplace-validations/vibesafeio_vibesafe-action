@@ -148,6 +148,15 @@ with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
     f.write('\n'.join(lines) + '\n')
 "
 
+echo "::group::VibeSafe — Fix Generator"
+python /vibesafe/tools/report/fix_generator.py \
+  --path "$TARGET" \
+  --secret-result /tmp/secrets.json \
+  --config-result /tmp/config.json \
+  --output-dir /tmp \
+  || echo "Fix generator failed (non-fatal)"
+echo "::endgroup::"
+
 echo "::group::VibeSafe — PR Comment"
 python /vibesafe/tools/report/pr_commenter.py /tmp/score.json || echo "PR comment failed (non-fatal)"
 echo "::endgroup::"
