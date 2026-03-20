@@ -50,6 +50,13 @@ FIX_SUGGESTIONS: list[tuple[str, str]] = [
     ("github_token", "Use `${{ secrets.GITHUB_TOKEN }}` in workflows, never hardcode tokens"),
     ("stripe_key", "Store Stripe keys in environment variables, not in source code"),
     ("jwt_token", "Never hardcode JWT secrets. Use environment variables or a key management service"),
+    # Config scanner findings
+    ("supabase_no_rls", "Enable RLS: `ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;` then add policies"),
+    ("supabase_anon_key_no_rls", "Enable RLS on ALL tables. Anon key is public — RLS is the only protection"),
+    ("supabase_no_migration", "Create SQL migrations with RLS policies, or verify in Supabase dashboard → Policies"),
+    ("firebase_test_mode", "Replace `allow read, write: if true` with `allow read, write: if request.auth != null`"),
+    ("firebase_public_read", "Restrict read: `allow read: if request.auth != null`"),
+    ("unpinned_dependency", "Pin to specific version to prevent supply chain attacks"),
     # Crypto
     ("insecure-hash", "Replace MD5/SHA1 with SHA-256 or stronger: `hashlib.sha256()`"),
     ("weak-random", "Use `secrets.token_hex()` instead of `random` for security-sensitive values"),
@@ -251,9 +258,32 @@ def format_findings_section(findings: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def load_config_findings(config_path: str) -> list[dict]:
+    """Load configuration scan findings (Supabase RLS, Firebase rules, etc.)."""
+    if not os.path.exists(config_path):
+        return []
+    try:
+        with open(config_path) as f:
+            data = json.load(f)
+        findings = []
+        for item in data.get("findings", []):
+            findings.append({
+                "severity": item.get("severity", "HIGH"),
+                "rule_id": item.get("type", "config_issue"),
+                "file": item.get("file", ""),
+                "line": item.get("line", 0),
+                "snippet": "",
+                "message": item.get("message", ""),
+            })
+        return findings
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
 def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
                        secrets_path: str = "/tmp/secrets.json",
-                       stack_path: str = "/tmp/stack.json") -> str:
+                       stack_path: str = "/tmp/stack.json",
+                       config_path: str = "/tmp/config.json") -> str:
     points = score["score"]
     grade = score["grade"]
     domain = score["domain"]
@@ -270,7 +300,7 @@ def build_comment_body(score: dict, sarif_path: str = "/tmp/sast.sarif",
             pass
 
     # 필터링된 findings에서 실제 카운트 산출 (raw score.json 대신)
-    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path, detected_stack)
+    all_findings = load_secret_findings(secrets_path) + load_sarif_findings(sarif_path, detected_stack) + load_config_findings(config_path)
     all_findings.sort(key=lambda f: (SEVERITY_ORDER.get(f["severity"], 99), f["file"], f["line"]))
 
     filtered_counts: dict[str, int] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}

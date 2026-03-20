@@ -107,6 +107,15 @@ SCA_COUNT=$(python -c "import json; d=json.load(open('/tmp/sca.json')); print(d.
 echo "Dependency vulnerabilities: $SCA_COUNT"
 echo "::endgroup::"
 
+echo "::group::VibeSafe — Config Scan (Supabase RLS, Firebase Rules)"
+python /vibesafe/tools/scanner/config_scanner.py \
+  --path "$TARGET" \
+  --output /tmp/config.json \
+  || echo '{"findings":[]}' > /tmp/config.json
+CONFIG_COUNT=$(python -c "import json; d=json.load(open('/tmp/config.json')); print(d.get('total', 0))" 2>/dev/null || echo "0")
+echo "Config findings: $CONFIG_COUNT"
+echo "::endgroup::"
+
 echo "::group::VibeSafe — Score"
 python /vibesafe/tools/report/score_calculator.py \
   --domain "$DOMAIN" \

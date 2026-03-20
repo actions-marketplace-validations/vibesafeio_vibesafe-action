@@ -14,6 +14,7 @@ COPY tools/scanner/sast_runner.py        tools/scanner/sast_runner.py
 COPY tools/scanner/domain_rule_engine.py tools/scanner/domain_rule_engine.py
 COPY tools/scanner/secret_scanner.py     tools/scanner/secret_scanner.py
 COPY tools/scanner/sca_scanner.py       tools/scanner/sca_scanner.py
+COPY tools/scanner/config_scanner.py    tools/scanner/config_scanner.py
 COPY rules/                             rules/
 COPY tools/report/score_calculator.py    tools/report/score_calculator.py
 COPY tools/report/pr_commenter.py       tools/report/pr_commenter.py
