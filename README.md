@@ -21,6 +21,25 @@
 
 ---
 
+## Who this is for
+
+- **Vibe coders** — building with Cursor, Claude, Copilot, Lovable, Bolt
+- **Solo developers** — shipping without a security team
+- **Startups** — moving fast but want to avoid the next Lovable/Moltbook breach
+
+## See it work
+
+1. Copy the YAML below → open a PR
+2. 20 seconds later, this comment appears:
+
+![VibeSafe PR Comment](./docs/screenshot-vuln.png)
+
+3. Expand **"Fix with AI"** → copy the prompt → paste into Cursor
+4. Your AI fixes everything
+5. Push again → **100/100 Grade A ✅ Certified**
+
+---
+
 ## Install (30 seconds)
 
 Copy this file to `.github/workflows/vibesafe-scan.yml`:

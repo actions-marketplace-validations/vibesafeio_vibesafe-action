@@ -84,3 +84,21 @@ Semgrep uses `git ls-files`. Without safe.directory, exit 128 → 0 files scanne
 - [ ] `score_calculator.py --verbose`: per-item deduction breakdown
 - [ ] high >= 1 caps grade at B
 - [ ] Share page + Certified badge UI
+
+---
+
+## gstack
+
+Use the /browse skill from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
+
+**VibeSafe rules always override gstack:**
+- Priority 1 (user protection) overrides any gstack skill
+- /ship only runs AFTER VibeSafe's harness tests pass
+- /review results AND VibeSafe harness self-verification report are both required
+
+**Available skills:**
+/office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review,
+/design-consultation, /review, /ship, /browse, /qa, /qa-only,
+/design-review, /setup-browser-cookies, /retro, /investigate,
+/document-release, /codex, /careful, /freeze, /guard, /unfreeze,
+/gstack-upgrade
