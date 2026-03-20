@@ -4,11 +4,15 @@
 
 ![VibeSafe PR Comment](./docs/screenshot-vuln.png)
 
-**What it does on every PR:**
-- Finds SQL injection, XSS, command injection, hardcoded secrets
-- Checks Supabase RLS and Firebase rules (the #1 cause of vibe-coding data breaches)
-- Posts **exact file, line, code, and how to fix it** as a PR comment
-- Blocks merge when critical vulnerabilities are found
+**Your AI writes code that works. VibeSafe checks if it's safe.**
+
+| Problem | VibeSafe catches it |
+|---------|-------------------|
+| AI hardcodes your API keys | **Secret detection** — flags the exact line + generates `.env.example` |
+| AI skips Supabase RLS | **Config scan** — catches missing Row Level Security (the Lovable/Moltbook breach cause) |
+| AI writes `eval()` and SQL injection | **SAST** — 500+ rules including 6 vibe-coding-specific patterns |
+| You don't know how to fix it | **AI Fix Prompt** — copy-paste into Cursor/Claude, it fixes everything |
+| Vulnerable deps slip in | **SCA** — checks pip and npm packages for known CVEs |
 
 **Free. Open source. 30-second setup. No account needed.**
 
@@ -82,15 +86,33 @@ Reproduce it yourself: `./test/benchmark_juiceshop.sh`
 
 ## What It Scans
 
-| Category | Details |
-|----------|---------|
-| **SAST** | SQL Injection, XSS, SSRF, IDOR, Command Injection, and more (OWASP Top 10) |
-| **Secret Detection** | API keys, GitHub tokens, Stripe keys, AWS credentials, JWT tokens |
-| **SCA (Dependencies)** | Known CVEs in Python (pip-audit) and Node.js (npm audit) packages |
-| **Domain Rules** | Auto-selects security rules based on your service type |
-| **Fix Suggestions** | 32 patterns with actionable remediation for each finding |
+| Layer | What AI gets wrong | VibeSafe catches |
+|-------|-------------------|------------------|
+| **Code** | `eval()`, f-string SQL, `shell=True`, XSS | SAST — OWASP Top 10 + 6 vibe-coding rules |
+| **Secrets** | Hardcoded API keys, tokens in frontend | 15 secret patterns + `.env.example` generation |
+| **Config** | Supabase without RLS, Firebase test mode | Config scanner — checks DB security policies |
+| **Dependencies** | Unpinned versions, known CVEs | SCA — pip-audit + npm audit |
+| **Headers** | Missing CORS, CSRF, Helmet | Custom rules for Express/Flask/Next.js |
 
 Supported languages: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
+
+## 🤖 AI Fix Prompt — the feature vibe coders actually need
+
+Other scanners say "you have 10 vulnerabilities." VibeSafe says **"paste this into Cursor and they're all fixed."**
+
+Every PR comment includes a collapsible **"Fix with AI"** section:
+
+```
+Fix these security issues in my code:
+- CRITICAL: config.py:5 — Store API key in .env: os.environ.get('OPENAI_API_KEY')
+- HIGH: app.py:24 — Use parameterized queries: cursor.execute("SELECT ... WHERE id = ?", (param,))
+- HIGH: app.py:67 — Remove shell=True: subprocess.run(shlex.split(cmd))
+
+Move all hardcoded secrets to environment variables.
+Generate a .env.example with placeholder values.
+```
+
+Copy. Paste into your AI. Done. **You don't fix code — your AI does. VibeSafe tells it what to fix.**
 
 ---
 
