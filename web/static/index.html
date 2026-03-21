@@ -37,6 +37,11 @@
             gap: 8px;
             margin-bottom: 12px;
         }
+        @media (max-width: 480px) {
+            .input-group { flex-direction: column; }
+            h1 { font-size: 1.5rem; }
+            .severity-row { flex-wrap: wrap; gap: 8px; }
+        }
         input[type="url"] {
             flex: 1;
             padding: 14px 16px;
@@ -166,8 +171,8 @@
     <div class="container">
         <h1>Is your AI-built app safe?</h1>
         <p class="subtitle">
-            Paste your GitHub repo URL. Get a safety score in 30 seconds.<br>
-            Security vulnerabilities + accessibility violations. No signup.
+            Paste your GitHub repo URL. Find out in 30 seconds.<br>
+            Free. No signup. No install.
         </p>
 
         <div class="input-group">
@@ -178,7 +183,8 @@
 
         <div id="scanning" class="scanning" style="display:none">
             <div class="spinner"></div>
-            <p>Scanning your repo... This takes about 30 seconds.</p>
+            <p id="scanStatus">Downloading your code...</p>
+            <p style="color:#555; font-size:0.8rem; margin-top:8px;">Usually takes 20-40 seconds</p>
         </div>
 
         <div id="results"></div>
@@ -226,7 +232,18 @@
         }
 
         function pollForResults(scanId) {
+            let pollCount = 0;
+            const stages = [
+                'Downloading your code...',
+                'Detecting tech stack...',
+                'Scanning for vulnerabilities...',
+                'Checking accessibility...',
+                'Calculating score...',
+            ];
             pollTimer = setInterval(async () => {
+                pollCount++;
+                const stageIdx = Math.min(Math.floor(pollCount / 3), stages.length - 1);
+                document.getElementById('scanStatus').textContent = stages[stageIdx];
                 try {
                     const res = await fetch(`/api/scan/status?id=${scanId}`);
                     const data = await res.json();
@@ -299,20 +316,17 @@
                 }));
             }
 
-            if (findings.length > 0) {
-                findings.slice(0, 20).forEach(f => {
-                    const sev = f.severity || 'medium';
-                    html += `
-                        <div class="finding ${sev}">
-                            <div class="finding-header">${sev.toUpperCase()}</div>
-                            <div class="finding-file">${f.file || ''}${f.line ? ':' + f.line : ''}</div>
-                            <div class="finding-fix">${f.message || f.rule_id || ''}</div>
-                        </div>
-                    `;
-                });
+            if (findings.length === 0) {
+                html += `
+                    <div style="text-align:center; padding:24px; background:#052e16; border:1px solid #166534; border-radius:12px; margin-bottom:24px;">
+                        <div style="font-size:2rem; margin-bottom:8px;">Your app looks safe!</div>
+                        <p style="color:#86efac;">No security or accessibility issues found.</p>
+                        <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this check on every code change? <a href="https://github.com/vibesafeio/vibesafe-action" style="color:#4ade80;">Add VibeSafe to your repo</a></p>
+                    </div>
+                `;
             }
 
-            // AI Fix Prompt
+            // AI Fix Prompt FIRST — this is what beginners need most
             if (findings.length > 0) {
                 const prompt = 'Fix these security and accessibility issues in my code:\\n' +
                     findings.slice(0, 20).map(f =>
@@ -320,12 +334,30 @@
                     ).join('\\n');
 
                 html += `
-                    <div class="ai-prompt">
-                        <h3>AI Fix Prompt — paste into Cursor or Claude</h3>
+                    <div class="ai-prompt" style="margin-bottom:24px;">
+                        <h3>Copy this into Cursor, Claude, or ChatGPT to fix everything:</h3>
                         <pre id="promptText">${prompt}</pre>
                         <button class="copy-btn" onclick="copyPrompt()">Copy to clipboard</button>
                     </div>
                 `;
+            }
+
+            // Then show details
+            if (findings.length > 0) {
+                html += '<h3 style="margin-bottom:12px; color:#888; font-size:0.95rem;">Details (' + findings.length + (results.sast.total > 50 ? ' of ' + results.sast.total : '') + ' issues)</h3>';
+                findings.slice(0, 20).forEach(f => {
+                    const sev = f.severity || 'medium';
+                    // Shorten message for readability
+                    let msg = f.message || f.rule_id || '';
+                    if (msg.length > 120) msg = msg.substring(0, 117) + '...';
+                    html += `
+                        <div class="finding ${sev}">
+                            <div class="finding-header">${sev.toUpperCase()}</div>
+                            <div class="finding-file">${f.file || ''}${f.line ? ':' + f.line : ''}</div>
+                            <div class="finding-fix">${msg}</div>
+                        </div>
+                    `;
+                });
             }
 
             document.getElementById('results').innerHTML = html;
