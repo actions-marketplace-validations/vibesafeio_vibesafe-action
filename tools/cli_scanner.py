@@ -15,7 +15,6 @@ Usage:
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -41,7 +40,7 @@ def clone_repo(url: str, dest: Path) -> bool:
         return False
 
 
-def run_scan(source_path: Path, output_json: bool = False) -> dict:
+def run_scan(source_path: Path) -> dict:
     """Run full VibeSafe scan pipeline on a path."""
     results = {
         "path": str(source_path),
@@ -274,7 +273,8 @@ def main():
             sys.exit(1)
 
     try:
-        print(f"  Scanning...")
+        if not args.json:
+            print(f"  Scanning...")
         results = run_scan(scan_path)
 
         if args.json:
