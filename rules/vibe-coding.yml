@@ -45,7 +45,7 @@ rules:
   - id: vibesafe.jwt-no-expiry
     patterns:
       - pattern: jwt.encode($PAYLOAD, ...)
-      - pattern-not: jwt.encode({..., "exp": ..., ...}, ...)
+      - pattern-not: "jwt.encode({..., exp: ..., ...}, ...)"
     message: >
       JWT token created without expiration time. Tokens without expiry never
       become invalid, so a leaked token grants permanent access.
@@ -77,27 +77,41 @@ rules:
       technology: [express]
       vibesafe-fix: "Install helmet: npm i helmet, then add app.use(helmet()) before routes"
 
-  - id: vibesafe.password-comparison-timing
+  - id: vibesafe.password-comparison-timing-py
     patterns:
       - pattern-either:
           - pattern: |
               if $PASSWORD == $INPUT: ...
           - pattern: |
               if $INPUT == $PASSWORD: ...
-          - pattern: |
-              $PASSWORD === $INPUT
-          - pattern: |
-              $INPUT === $PASSWORD
     message: >
-      Password compared using == or ===. This is vulnerable to timing attacks.
+      Password compared using ==. This is vulnerable to timing attacks.
       Use a constant-time comparison function instead.
-    languages: [python, javascript, typescript]
+    languages: [python]
     severity: WARNING
     metadata:
       category: security
       subcategory: [vuln]
       cwe: "CWE-208: Observable Timing Discrepancy"
-      vibesafe-fix: "Python: hmac.compare_digest(). Node.js: crypto.timingSafeEqual()"
+      vibesafe-fix: "Use hmac.compare_digest(password_hash, input_hash)"
+
+  - id: vibesafe.password-comparison-timing-js
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $PASSWORD === $INPUT
+          - pattern: |
+              $INPUT === $PASSWORD
+    message: >
+      Password compared using ===. This is vulnerable to timing attacks.
+      Use a constant-time comparison function instead.
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [vuln]
+      cwe: "CWE-208: Observable Timing Discrepancy"
+      vibesafe-fix: "Use crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))"
 
   - id: vibesafe.supabase-anon-key-in-code
     pattern-regex: "eyJ[A-Za-z0-9_-]{30,}\\.eyJ[A-Za-z0-9_-]{30,}\\.[-A-Za-z0-9_]+"
@@ -118,3 +132,89 @@ rules:
       subcategory: [vuln]
       technology: [supabase]
       vibesafe-fix: "Move to env var: const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)"
+
+  # ===== Accessibility (a11y) =====
+  # AI-generated code almost never includes accessibility attributes.
+  # 64% of ADA web accessibility lawsuits target companies under $25M revenue.
+
+  - id: vibesafe.a11y-img-missing-alt
+    pattern-regex: "<img\\s+(?!(?:[^>]*\\balt\\s*=))[^>]*/?>"
+    paths:
+      include:
+        - "*.tsx"
+        - "*.jsx"
+      exclude:
+        - "*test*"
+        - "*spec*"
+        - "*__tests__*"
+    message: >
+      Accessibility: <img> without alt attribute. Screen readers cannot describe
+      this image to visually impaired users. This is a WCAG 2.1 Level A violation
+      and a common basis for ADA lawsuits.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: accessibility
+      subcategory: [a11y]
+      cwe: "WCAG 2.1 — 1.1.1 Non-text Content (Level A)"
+      vibesafe-fix: "Add alt text: <img alt=\"Description of image\" ... /> or alt=\"\" for decorative images"
+
+  - id: vibesafe.a11y-input-missing-label
+    pattern-regex: "<input\\s+(?!(?:[^>]*(?:aria-label|aria-labelledby|type\\s*=\\s*[\"']hidden)\\s*=))[^>]*/?>|<textarea\\s+(?!(?:[^>]*(?:aria-label|aria-labelledby)\\s*=))[^>]*>"
+    paths:
+      include:
+        - "*.tsx"
+        - "*.jsx"
+      exclude:
+        - "*test*"
+        - "*spec*"
+    message: >
+      Accessibility: Form input without aria-label or aria-labelledby.
+      Screen readers cannot identify this field. WCAG 2.1 Level A violation.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: accessibility
+      subcategory: [a11y]
+      cwe: "WCAG 2.1 — 1.3.1 Info and Relationships (Level A)"
+      vibesafe-fix: "Add aria-label: <input aria-label=\"Email address\" ... />"
+
+  - id: vibesafe.a11y-html-missing-lang
+    pattern-regex: "<html(?!\\s[^>]*\\blang\\s*=)[^>]*>"
+    paths:
+      include:
+        - "*.html"
+        - "*.tsx"
+        - "*.jsx"
+    message: >
+      Accessibility: <html> without lang attribute. Screen readers use this to
+      determine pronunciation. WCAG 2.1 Level A violation.
+    languages: [html, typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: accessibility
+      subcategory: [a11y]
+      cwe: "WCAG 2.1 — 3.1.1 Language of Page (Level A)"
+      vibesafe-fix: "Add lang attribute: <html lang=\"en\"> or <html lang=\"ko\">"
+
+  - id: vibesafe.a11y-clickable-div-no-role
+    pattern-regex: "<(?:div|span)\\s+[^>]*onClick[^>]*(?!role\\s*=)[^>]*>"
+    paths:
+      include:
+        - "*.tsx"
+        - "*.jsx"
+      exclude:
+        - "*test*"
+        - "*spec*"
+    message: >
+      Accessibility: Clickable <div> or <span> without role="button" and
+      keyboard handler. Non-interactive elements with onClick are invisible
+      to screen readers and unusable via keyboard. Use <button> instead, or
+      add role="button" tabIndex={0} onKeyDown handler.
+    languages: [typescript, javascript]
+    severity: WARNING
+    metadata:
+      category: accessibility
+      subcategory: [a11y]
+      cwe: "WCAG 2.1 — 4.1.2 Name, Role, Value (Level A)"
+      vibesafe-fix: "Use <button> instead of <div onClick>, or add role=\"button\" tabIndex={0} onKeyDown={handleKey}"
