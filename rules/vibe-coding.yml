@@ -95,23 +95,10 @@ rules:
       cwe: "CWE-208: Observable Timing Discrepancy"
       vibesafe-fix: "Use hmac.compare_digest(password_hash, input_hash)"
 
-  - id: vibesafe.password-comparison-timing-js
-    patterns:
-      - pattern-either:
-          - pattern: |
-              $PASSWORD === $INPUT
-          - pattern: |
-              $INPUT === $PASSWORD
-    message: >
-      Password compared using ===. This is vulnerable to timing attacks.
-      Use a constant-time comparison function instead.
-    languages: [javascript, typescript]
-    severity: WARNING
-    metadata:
-      category: security
-      subcategory: [vuln]
-      cwe: "CWE-208: Observable Timing Discrepancy"
-      vibesafe-fix: "Use crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))"
+  # DISABLED: password-comparison-timing-js catches ALL === comparisons, not just
+  # password comparisons. FP rate ~99%. Re-enable when pattern can be narrowed to
+  # variables named password/hash/secret/token.
+  # - id: vibesafe.password-comparison-timing-js
 
   - id: vibesafe.supabase-anon-key-in-code
     pattern-regex: "eyJ[A-Za-z0-9_-]{30,}\\.eyJ[A-Za-z0-9_-]{30,}\\.[-A-Za-z0-9_]+"

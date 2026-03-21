@@ -61,8 +61,19 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
             repo_url = body.get("url", "").strip()
 
+            # Normalize URL for beginner-friendly input
+            repo_url = repo_url.rstrip("/")
+            if repo_url.startswith("github.com/"):
+                repo_url = "https://" + repo_url
+            # Strip /tree/main, /tree/master, /blob/... suffixes
+            for suffix in ["/tree/main", "/tree/master", "/tree/", "/blob/"]:
+                idx = repo_url.find(suffix)
+                if idx > 0:
+                    repo_url = repo_url[:idx]
+                    break
+
             if not repo_url or not repo_url.startswith("https://github.com/"):
-                self._json_response({"error": "Invalid GitHub URL"}, 400)
+                self._json_response({"error": "Please enter a GitHub URL (e.g. github.com/your/repo)"}, 400)
                 return
 
             scan_id = str(uuid.uuid4())[:8]

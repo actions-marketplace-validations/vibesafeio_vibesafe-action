@@ -188,9 +188,19 @@
         let pollTimer = null;
 
         async function startScan() {
-            const url = document.getElementById('repoUrl').value.trim();
+            let url = document.getElementById('repoUrl').value.trim();
+            // Normalize for beginners
+            url = url.replace(/\/+$/, '');
+            if (url.startsWith('github.com/')) url = 'https://' + url;
+            ['/tree/main', '/tree/master'].forEach(s => {
+                const idx = url.indexOf(s);
+                if (idx > 0) url = url.substring(0, idx);
+            });
+            if (url.endsWith('.git')) url = url.slice(0, -4);
+            document.getElementById('repoUrl').value = url;
+
             if (!url.startsWith('https://github.com/')) {
-                alert('Please enter a valid GitHub URL (https://github.com/...)');
+                alert('Please enter a GitHub URL (e.g. github.com/your/repo)');
                 return;
             }
 
