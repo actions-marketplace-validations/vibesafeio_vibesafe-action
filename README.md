@@ -1,22 +1,12 @@
 # VibeSafe — Security Scanner for Vibe-Coded Apps
 
-> Your Cursor-generated code probably has your **API keys hardcoded right now.** Someone could find them in your GitHub repo, run up thousands in OpenAI charges on your account, and you wouldn't know until the bill arrives.
+> AI writes code that works. It doesn't write code that's safe. [53% of AI-generated code has security vulnerabilities.](https://www.getautonoma.com/blog/vibe-coding-security-risks)
 
-> This already happened — [Moltbook leaked 1.5 million auth tokens](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/). [A Lovable app exposed 18,000 users' data](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/). Both apps worked perfectly. Both were vibe-coded.
+VibeSafe scans every PR for hardcoded secrets, SQL injection, missing Supabase RLS, and 500+ vulnerability patterns. It tells you the exact file, line, and how to fix it.
 
 ![VibeSafe PR Comment](./docs/screenshot-vuln.png)
 
-**VibeSafe finds what your AI forgot to secure:**
-
-| Your AI did this | What happens | VibeSafe catches it |
-|-----------------|-------------|-------------------|
-| Hardcoded your OpenAI/Stripe key | Someone finds it → charges your account | **Flags the exact line** + generates `.env.example` |
-| Skipped Supabase RLS | Anyone can read your entire database | **Config scan** — the Lovable breach cause |
-| Wrote `eval(user_input)` | Hacker runs any code on your server | **SAST** — blocks before merge |
-| Used `f"SELECT * WHERE id={id}"` | SQL injection → full database dump | **500+ rules** including AI-specific patterns |
-| You don't know how to fix it | You stare at the error | **AI Fix Prompt** — paste into Cursor, done |
-
-**Free. Open source. 30-second setup. No account needed.**
+**Free. Open source. 30-second setup.**
 
 [![GitHub Action](https://img.shields.io/badge/GitHub%20Action-vibesafe--action-blue?logo=github)](https://github.com/vibesafeio/vibesafe-action)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
