@@ -17,7 +17,8 @@ SEVERITY_EMOJI = {
 }
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 SEVERITY_MAP = {"ERROR": "HIGH", "WARNING": "MEDIUM", "NOTE": "LOW", "NONE": "INFO"}
-MAX_FINDINGS = 20  # PR 코멘트 길이 제한 방지
+MAX_INLINE = 5     # Show top 5 inline, rest in collapsed details
+MAX_FINDINGS = 20  # Absolute cap
 
 # 룰 기반 수정 제안 매핑 (rule_id 부분 매칭 → 수정 가이드)
 FIX_SUGGESTIONS: list[tuple[str, str]] = [
@@ -215,11 +216,14 @@ def format_findings_section(findings: list[dict]) -> str:
         return ""
 
     grouped = group_findings(findings)
+    total_grouped = len(grouped)
     shown = grouped[:MAX_FINDINGS]
-    remaining = len(grouped) - len(shown)
 
     lines = ["", "### Findings", ""]
-    for f in shown:
+
+    def _format_one(f: dict) -> list[str]:
+        """Format a single finding as markdown lines."""
+        out: list[str] = []
         emoji = SEVERITY_EMOJI.get(f["severity"], "\u26aa")
         location = ""
         if f["file"]:
@@ -228,34 +232,52 @@ def format_findings_section(findings: list[dict]) -> str:
                 location += f":{f['line']}"
             location += "`"
 
-        # 관련 탐지 수
         related = f.get("related_count", 0)
         related_tag = f" (+{related} related)" if related > 0 else ""
 
-        # 첫 줄: severity + rule ID + 위치 + related
-        lines.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}{related_tag}")
+        out.append(f"**{emoji} {f['severity']}** — `{f['rule_id']}`{location}{related_tag}")
 
-        # 메시지 (한 줄로 축약, 200자 제한)
         msg = f["message"].replace("\n", " ").strip()
         if len(msg) > 200:
             msg = msg[:197] + "..."
         if msg:
-            lines.append(f"> {msg}")
+            out.append(f"> {msg}")
+        return out
 
-        # 코드 스니펫 (있으면)
+    # Show top MAX_INLINE findings inline
+    inline = shown[:MAX_INLINE]
+    rest = shown[MAX_INLINE:]
+
+    for f in inline:
+        lines.extend(_format_one(f))
+
         if f["snippet"]:
             snippet_line = f["snippet"].split("\n")[0][:120]
             lines.append(f"> ```\n> {snippet_line}\n> ```")
 
-        # 수정 제안 (있으면)
         fix = get_fix_suggestion(f["rule_id"])
         if fix:
             lines.append(f"> **Fix:** {fix}")
 
         lines.append("")
 
-    if remaining > 0:
-        lines.append(f"<sub>+{remaining} more omitted</sub>")
+    # Collapse remaining findings
+    if rest:
+        lines.append(f"<details>")
+        lines.append(f"<summary>+{len(rest)} more findings</summary>")
+        lines.append("")
+        for f in rest:
+            lines.extend(_format_one(f))
+            fix = get_fix_suggestion(f["rule_id"])
+            if fix:
+                lines.append(f"> **Fix:** {fix}")
+            lines.append("")
+        lines.append("</details>")
+        lines.append("")
+
+    omitted = total_grouped - len(shown)
+    if omitted > 0:
+        lines.append(f"<sub>+{omitted} more omitted</sub>")
         lines.append("")
 
     return "\n".join(lines)
