@@ -15,9 +15,9 @@ VibeSafe scans every PR for hardcoded secrets, SQL injection, missing Supabase R
 
 ## Who this is for
 
-- **Vibe coders** — building with Cursor, Claude, Copilot, Lovable, Bolt
-- **Solo developers** — shipping without a security team
-- **Startups** — moving fast but want to avoid the next Lovable/Moltbook breach
+The moment you add a signup form, accept payments, or store user data — **that data is your responsibility.** If it leaks, there's no one else to blame.
+
+VibeSafe is for developers who ship fast and need a safety net that doesn't slow them down.
 
 ## Try it now (no install needed)
 
