@@ -166,10 +166,26 @@ def run_scan(source_path: Path) -> dict:
             results["secrets"] = json.loads(secrets_path.read_text())
         if sarif_path.exists():
             sarif = json.loads(sarif_path.read_text())
-            results["sast"]["total"] = sum(
-                len(run.get("results", []))
-                for run in sarif.get("runs", [])
-            )
+            sast_findings = []
+            scan_prefix = str(source_path) + "/"
+            for run in sarif.get("runs", []):
+                for r in run.get("results", []):
+                    level = r.get("level", "warning")
+                    severity = {"error": "high", "warning": "medium", "note": "low"}.get(level, "medium")
+                    loc = r.get("locations", [{}])[0].get("physicalLocation", {})
+                    file_path = loc.get("artifactLocation", {}).get("uri", "")
+                    # Strip temp directory prefix
+                    if file_path.startswith(scan_prefix):
+                        file_path = file_path[len(scan_prefix):]
+                    sast_findings.append({
+                        "rule_id": r.get("ruleId", ""),
+                        "severity": severity,
+                        "message": r.get("message", {}).get("text", ""),
+                        "file": file_path,
+                        "line": loc.get("region", {}).get("startLine", 0),
+                    })
+            results["sast"]["total"] = len(sast_findings)
+            results["sast"]["findings"] = sast_findings[:50]  # Limit to 50 for API
         if config_path.exists():
             results["config"] = json.loads(config_path.read_text())
 
@@ -258,11 +274,15 @@ def main():
     # Determine if URL or local path
     if target.startswith("http://") or target.startswith("https://") or target.startswith("git@"):
         # GitHub URL — clone to temp dir
-        print(f"\n  Cloning {target}...")
+        if not args.json:
+            print(f"\n  Cloning {target}...")
         tmp_dir = Path(tempfile.mkdtemp(prefix="vibesafe-scan-"))
         if not clone_repo(target, tmp_dir):
-            print(f"\n  Error: Could not clone {target}")
-            print("  Check the URL and try again.")
+            if args.json:
+                print(json.dumps({"error": f"Could not clone {target}"}))
+            else:
+                print(f"\n  Error: Could not clone {target}")
+                print("  Check the URL and try again.")
             sys.exit(1)
         scan_path = tmp_dir
         cleanup = True

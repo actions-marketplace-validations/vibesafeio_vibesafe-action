@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeSafe — Is your AI-built app safe?</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 640px;
+            width: 100%;
+            padding: 60px 20px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        input[type="url"] {
+            flex: 1;
+            padding: 14px 16px;
+            font-size: 1rem;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: #fff;
+            outline: none;
+        }
+        input[type="url"]:focus { border-color: #4ade80; }
+        input[type="url"]::placeholder { color: #555; }
+        button {
+            padding: 14px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            background: #4ade80;
+            color: #000;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:hover { background: #22c55e; }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .hint { color: #555; font-size: 0.85rem; margin-bottom: 40px; }
+
+        /* Results */
+        #results { display: none; margin-top: 40px; text-align: left; }
+        .grade-box {
+            text-align: center;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .grade-box.good { background: #052e16; border: 1px solid #166534; }
+        .grade-box.warn { background: #422006; border: 1px solid #854d0e; }
+        .grade-box.bad { background: #450a0a; border: 1px solid #991b1b; }
+        .grade-letter { font-size: 3rem; font-weight: 800; }
+        .grade-score { font-size: 1.2rem; color: #aaa; }
+        .grade-label { color: #888; margin-top: 4px; }
+
+        .severity-row {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #111;
+            border-radius: 8px;
+        }
+        .severity-item { text-align: center; }
+        .severity-count { font-size: 1.5rem; font-weight: 700; }
+        .severity-label { font-size: 0.8rem; color: #888; }
+
+        .finding {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #111;
+            border-radius: 8px;
+            border-left: 3px solid #666;
+        }
+        .finding.critical { border-left-color: #ef4444; }
+        .finding.high { border-left-color: #f97316; }
+        .finding.medium { border-left-color: #eab308; }
+        .finding.low { border-left-color: #22c55e; }
+        .finding-header { font-weight: 600; margin-bottom: 4px; }
+        .finding-file { color: #888; font-size: 0.85rem; font-family: monospace; }
+        .finding-fix { color: #4ade80; font-size: 0.9rem; margin-top: 6px; }
+
+        .ai-prompt {
+            margin-top: 24px;
+            padding: 16px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        .ai-prompt h3 { margin-bottom: 8px; font-size: 1rem; }
+        .ai-prompt pre {
+            background: #0a0a0a;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            color: #ccc;
+        }
+        .copy-btn {
+            margin-top: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: #444; }
+
+        .scanning {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .scanning .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #333;
+            border-top: 3px solid #4ade80;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .stats {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #222;
+            color: #555;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Is your AI-built app safe?</h1>
+        <p class="subtitle">
+            Paste your GitHub repo URL. Get a safety score in 30 seconds.<br>
+            Security vulnerabilities + accessibility violations. No signup.
+        </p>
+
+        <div class="input-group">
+            <input type="url" id="repoUrl" placeholder="https://github.com/your/repo" />
+            <button id="scanBtn" onclick="startScan()">Scan</button>
+        </div>
+        <p class="hint">Public GitHub repos only. Your code stays on our server only during the scan.</p>
+
+        <div id="scanning" class="scanning" style="display:none">
+            <div class="spinner"></div>
+            <p>Scanning your repo... This takes about 30 seconds.</p>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let pollTimer = null;
+
+        async function startScan() {
+            const url = document.getElementById('repoUrl').value.trim();
+            if (!url.startsWith('https://github.com/')) {
+                alert('Please enter a valid GitHub URL (https://github.com/...)');
+                return;
+            }
+
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('scanning').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+                const data = await res.json();
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                pollForResults(data.id);
+            } catch (e) {
+                showError('Failed to start scan. Please try again.');
+            }
+        }
+
+        function pollForResults(scanId) {
+            pollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/scan/status?id=${scanId}`);
+                    const data = await res.json();
+                    if (data.status === 'done') {
+                        clearInterval(pollTimer);
+                        showResults(data.results);
+                    } else if (data.status === 'error') {
+                        clearInterval(pollTimer);
+                        showError(data.error || 'Scan failed');
+                    }
+                } catch (e) {
+                    clearInterval(pollTimer);
+                    showError('Connection lost');
+                }
+            }, 2000);
+        }
+
+        function showResults(results) {
+            document.getElementById('scanning').style.display = 'none';
+            document.getElementById('scanBtn').disabled = false;
+
+            const score = results.score || {};
+            const grade = score.grade || '?';
+            const points = score.score ?? '?';
+            const critical = score.critical || 0;
+            const high = score.high || 0;
+            const medium = score.medium || 0;
+            const low = score.low || 0;
+
+            const gradeClass = points >= 85 ? 'good' : points >= 50 ? 'warn' : 'bad';
+
+            let html = `
+                <div class="grade-box ${gradeClass}">
+                    <div class="grade-letter">${grade}</div>
+                    <div class="grade-score">${points}/100</div>
+                    <div class="grade-label">${score.grade_label || ''}</div>
+                </div>
+                <div class="severity-row">
+                    <div class="severity-item">
+                        <div class="severity-count" style="color:#ef4444">${critical}</div>
+                        <div class="severity-label">Critical</div>
+                    </div>
+                    <div class="severity-item">
+                        <div class="severity-count" style="color:#f97316">${high}</div>
+                        <div class="severity-label">High</div>
+                    </div>
+                    <div class="severity-item">
+                        <div class="severity-count" style="color:#eab308">${medium}</div>
+                        <div class="severity-label">Medium</div>
+                    </div>
+                    <div class="severity-item">
+                        <div class="severity-count" style="color:#22c55e">${low}</div>
+                        <div class="severity-label">Low</div>
+                    </div>
+                </div>
+            `;
+
+            // Collect findings from SAST + secrets
+            const findings = [];
+            if (results.sast && results.sast.findings) {
+                results.sast.findings.forEach(f => findings.push(f));
+            }
+            if (results.secrets && results.secrets.secrets) {
+                results.secrets.secrets.forEach(s => findings.push({
+                    severity: 'critical',
+                    rule_id: s.type || 'hardcoded-secret',
+                    file: s.file || '',
+                    line: s.line || 0,
+                    message: s.description || 'Hardcoded secret detected',
+                }));
+            }
+
+            if (findings.length > 0) {
+                findings.slice(0, 20).forEach(f => {
+                    const sev = f.severity || 'medium';
+                    html += `
+                        <div class="finding ${sev}">
+                            <div class="finding-header">${sev.toUpperCase()}</div>
+                            <div class="finding-file">${f.file || ''}${f.line ? ':' + f.line : ''}</div>
+                            <div class="finding-fix">${f.message || f.rule_id || ''}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            // AI Fix Prompt
+            if (findings.length > 0) {
+                const prompt = 'Fix these security and accessibility issues in my code:\\n' +
+                    findings.slice(0, 20).map(f =>
+                        `- ${(f.severity || 'MEDIUM').toUpperCase()}: ${f.file || ''}${f.line ? ':' + f.line : ''} — ${f.message || f.rule_id || ''}`
+                    ).join('\\n');
+
+                html += `
+                    <div class="ai-prompt">
+                        <h3>AI Fix Prompt — paste into Cursor or Claude</h3>
+                        <pre id="promptText">${prompt}</pre>
+                        <button class="copy-btn" onclick="copyPrompt()">Copy to clipboard</button>
+                    </div>
+                `;
+            }
+
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showError(msg) {
+            document.getElementById('scanning').style.display = 'none';
+            document.getElementById('scanBtn').disabled = false;
+            document.getElementById('results').innerHTML = `
+                <div class="grade-box bad">
+                    <div class="grade-letter">!</div>
+                    <div class="grade-score">Scan failed</div>
+                    <div class="grade-label">${msg}</div>
+                </div>
+            `;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('promptText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 2000);
+            });
+        }
+
+        // Enter key support
+        document.getElementById('repoUrl').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startScan();
+        });
+    </script>
+</body>
+</html>
