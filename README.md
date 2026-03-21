@@ -27,6 +27,21 @@
 - **Solo developers** — shipping without a security team
 - **Startups** — moving fast but want to avoid the next Lovable/Moltbook breach
 
+## Try it now (no install needed)
+
+Scan any GitHub repo instantly:
+
+```bash
+git clone https://github.com/vibesafeio/vibesafe-action.git
+python3 vibesafe-action/tools/cli_scanner.py https://github.com/YOUR/REPO
+```
+
+Get your score in 30 seconds. No signup, no API key, no config.
+
+**Want this on every PR — automatically?** Keep reading. ↓
+
+---
+
 ## See it work
 
 1. Copy the YAML below → open a PR
