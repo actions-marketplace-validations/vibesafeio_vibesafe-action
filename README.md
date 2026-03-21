@@ -1,18 +1,20 @@
 # VibeSafe — Security Scanner for Vibe-Coded Apps
 
-> **If you're vibe coding without a security scan, your app is probably vulnerable right now.** Not maybe. [53% of AI-generated code ships with security holes.](https://www.getautonoma.com/blog/vibe-coding-security-risks)
+> Your Cursor-generated code probably has your **API keys hardcoded right now.** Someone could find them in your GitHub repo, run up thousands in OpenAI charges on your account, and you wouldn't know until the bill arrives.
+
+> This already happened — [Moltbook leaked 1.5 million auth tokens](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/). [A Lovable app exposed 18,000 users' data](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/). Both apps worked perfectly. Both were vibe-coded.
 
 ![VibeSafe PR Comment](./docs/screenshot-vuln.png)
 
-**You're probably not scanning at all.** Most vibe coders aren't. VibeSafe adds a security check to every PR — 30 seconds to set up, then it runs automatically forever.
+**VibeSafe finds what your AI forgot to secure:**
 
-| Problem | VibeSafe catches it |
-|---------|-------------------|
-| AI hardcodes your API keys | **Secret detection** — flags the exact line + generates `.env.example` |
-| AI skips Supabase RLS | **Config scan** — catches missing Row Level Security (the Lovable/Moltbook breach cause) |
-| AI writes `eval()` and SQL injection | **SAST** — 500+ rules including 6 vibe-coding-specific patterns |
-| You don't know how to fix it | **AI Fix Prompt** — copy-paste into Cursor/Claude, it fixes everything |
-| Vulnerable deps slip in | **SCA** — checks pip and npm packages for known CVEs |
+| Your AI did this | What happens | VibeSafe catches it |
+|-----------------|-------------|-------------------|
+| Hardcoded your OpenAI/Stripe key | Someone finds it → charges your account | **Flags the exact line** + generates `.env.example` |
+| Skipped Supabase RLS | Anyone can read your entire database | **Config scan** — the Lovable breach cause |
+| Wrote `eval(user_input)` | Hacker runs any code on your server | **SAST** — blocks before merge |
+| Used `f"SELECT * WHERE id={id}"` | SQL injection → full database dump | **500+ rules** including AI-specific patterns |
+| You don't know how to fix it | You stare at the error | **AI Fix Prompt** — paste into Cursor, done |
 
 **Free. Open source. 30-second setup. No account needed.**
 
