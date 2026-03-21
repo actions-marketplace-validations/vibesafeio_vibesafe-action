@@ -1,8 +1,8 @@
-# VibeSafe — Security Scanner for Vibe-Coded Apps
+# VibeSafe — Safety Scanner for Vibe-Coded Apps
 
-> AI writes code that works. It doesn't write code that's safe. [53% of AI-generated code has security vulnerabilities.](https://www.getautonoma.com/blog/vibe-coding-security-risks)
+> AI writes code that works. It doesn't write code that's safe. [53% of AI-generated code has security vulnerabilities.](https://www.getautonoma.com/blog/vibe-coding-security-risks) [4,000+ ADA accessibility lawsuits filed in 2024.](https://www.audioeye.com/post/website-accessibility-in-2025/)
 
-VibeSafe scans every PR for hardcoded secrets, SQL injection, missing Supabase RLS, and 500+ vulnerability patterns. It tells you the exact file, line, and how to fix it.
+VibeSafe scans every PR for security vulnerabilities, accessibility violations, hardcoded secrets, and 500+ patterns. It tells you the exact file, line, and how to fix it.
 
 ![VibeSafe PR Comment](./docs/screenshot-vuln.png)
 
@@ -15,7 +15,7 @@ VibeSafe scans every PR for hardcoded secrets, SQL injection, missing Supabase R
 
 ## Who this is for
 
-The moment you add a signup form, accept payments, or store user data — **that data is your responsibility.** If it leaks, there's no one else to blame.
+The moment you add a signup form, accept payments, or store user data — **that data is your responsibility.** If it leaks, there's no one else to blame. If your app isn't accessible, [64% of ADA lawsuits target businesses under $25M revenue](https://www.ecomback.com/ada-website-lawsuits-recap-report/2025-mid-year-ada-website-lawsuit-report).
 
 VibeSafe is for developers who ship fast and need a safety net that doesn't slow them down.
 
@@ -81,6 +81,50 @@ PR comments are posted automatically. No extra configuration needed.
 
 ---
 
+## How it works
+
+```
+PR opened
+  │
+  ▼
+┌─────────────────────────────────────────────┐
+│  1. Stack Detection                         │
+│     Reads imports, configs, package.json    │
+│     → Flask? Express? Next.js? Supabase?    │
+└──────────────────┬──────────────────────────┘
+                   ▼
+┌─────────────────────────────────────────────┐
+│  2. Rule Selection                          │
+│     Domain (ecommerce/fintech/platform)     │
+│     + Language + Framework → rule set       │
+└──────────────────┬──────────────────────────┘
+                   ▼
+┌─────────────────────────────────────────────┐
+│  3. Scan (parallel)                         │
+│                                             │
+│  SAST ──────── SQL injection, XSS, eval()  │
+│  Secrets ───── API keys, tokens, JWTs       │
+│  SCA ───────── Known CVEs in dependencies   │
+│  Config ────── Supabase RLS, Firebase rules │
+│  Accessibility  <img> no alt, input no label│
+└──────────────────┬──────────────────────────┘
+                   ▼
+┌─────────────────────────────────────────────┐
+│  4. Score (0-100)                           │
+│     Weighted by domain + severity           │
+│     Framework conflict filtering            │
+│     → Grade A/B/C/D/F + Certified badge     │
+└──────────────────┬──────────────────────────┘
+                   ▼
+┌─────────────────────────────────────────────┐
+│  5. PR Comment                              │
+│     File:line + code + fix + AI Fix Prompt  │
+│     Fail gate → exit 1 if critical found    │
+└─────────────────────────────────────────────┘
+```
+
+---
+
 ## What happens if you don't scan
 
 These are real incidents from vibe-coded apps:
@@ -121,6 +165,7 @@ We scanned [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (deliber
 | **Config** | Supabase without RLS, Firebase test mode | Config scanner — checks DB security policies |
 | **Dependencies** | Unpinned versions, known CVEs | SCA — pip-audit + npm audit |
 | **Headers** | Missing CORS, CSRF, Helmet | Custom rules for Express/Flask/Next.js |
+| **Accessibility** | `<img>` without alt, `<input>` without label, `<html>` without lang | 3 WCAG 2.1 Level A rules |
 
 Supported languages: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
 

@@ -160,7 +160,7 @@ rules:
       vibesafe-fix: "Add alt text: <img alt=\"Description of image\" ... /> or alt=\"\" for decorative images"
 
   - id: vibesafe.a11y-input-missing-label
-    pattern-regex: "<input\\s+(?!(?:[^>]*(?:aria-label|aria-labelledby|type\\s*=\\s*[\"']hidden)\\s*=))[^>]*/?>|<textarea\\s+(?!(?:[^>]*(?:aria-label|aria-labelledby)\\s*=))[^>]*>"
+    pattern-regex: "<input\\s+(?![^>]*(?:aria-label|aria-labelledby))[^>]*(?:type\\s*=\\s*[\"'](?!hidden)[^\"']*[\"'])[^>]*/?>|<input\\s+(?![^>]*(?:aria-label|aria-labelledby|type\\s*=))[^>]*/?>|<textarea\\s+(?![^>]*(?:aria-label|aria-labelledby))[^>]*>"
     paths:
       include:
         - "*.tsx"
@@ -197,24 +197,6 @@ rules:
       cwe: "WCAG 2.1 — 3.1.1 Language of Page (Level A)"
       vibesafe-fix: "Add lang attribute: <html lang=\"en\"> or <html lang=\"ko\">"
 
-  - id: vibesafe.a11y-clickable-div-no-role
-    pattern-regex: "<(?:div|span)\\s+[^>]*onClick[^>]*(?!role\\s*=)[^>]*>"
-    paths:
-      include:
-        - "*.tsx"
-        - "*.jsx"
-      exclude:
-        - "*test*"
-        - "*spec*"
-    message: >
-      Accessibility: Clickable <div> or <span> without role="button" and
-      keyboard handler. Non-interactive elements with onClick are invisible
-      to screen readers and unusable via keyboard. Use <button> instead, or
-      add role="button" tabIndex={0} onKeyDown handler.
-    languages: [typescript, javascript]
-    severity: WARNING
-    metadata:
-      category: accessibility
-      subcategory: [a11y]
-      cwe: "WCAG 2.1 — 4.1.2 Name, Role, Value (Level A)"
-      vibesafe-fix: "Use <button> instead of <div onClick>, or add role=\"button\" tabIndex={0} onKeyDown={handleKey}"
+  # DISABLED: clickable-div-no-role — FP when role= appears after onClick.
+  # Semgrep pattern-not-regex can't exclude within regex-matched text.
+  # Re-enable when Semgrep adds proper JSX attribute matching.
