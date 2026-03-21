@@ -1,10 +1,10 @@
 # VibeSafe — Security Scanner for Vibe-Coded Apps
 
-> **53% of AI-generated code has security vulnerabilities.** VibeSafe catches them before you merge.
+> **If you're vibe coding without a security scan, your app is probably vulnerable right now.** Not maybe. [53% of AI-generated code ships with security holes.](https://www.getautonoma.com/blog/vibe-coding-security-risks)
 
 ![VibeSafe PR Comment](./docs/screenshot-vuln.png)
 
-**Your AI writes code that works. VibeSafe checks if it's safe.**
+**You're probably not scanning at all.** Most vibe coders aren't. VibeSafe adds a security check to every PR — 30 seconds to set up, then it runs automatically forever.
 
 | Problem | VibeSafe catches it |
 |---------|-------------------|
@@ -74,32 +74,34 @@ PR comments are posted automatically. No extra configuration needed.
 
 ---
 
-## Why VibeSafe?
+## What happens if you don't scan
+
+These are real incidents from vibe-coded apps:
+
+- **[Moltbook](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — 1.5 million auth tokens + 35,000 emails exposed. The app worked perfectly. The security didn't.
+- **[Lovable app](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — One app leaked 18,000 users' data through misconfigured Supabase RLS.
+- **[Escape research](https://escape.tech/blog/methodology-how-we-discovered-vulnerabilities-apps-built-with-vibe-coding/)** — 5,600 vibe-coded apps scanned → 2,000+ vulnerabilities, 400+ exposed secrets, 175 PII leaks.
+
+Your app might be next. Or it might be fine. **The only way to know is to scan it.**
+
+<details>
+<summary>How does VibeSafe compare to other tools?</summary>
 
 | | VibeSafe | Snyk | CodeQL | Dependabot |
 |---|---|---|---|---|
-| Setup time | **30 seconds** (copy YAML) | 30min+ (account+API key+CLI) | 15min+ (build config) | Auto (deps only) |
-| Cost | **Free** | $35K~$90K/yr | Free (public repos) | Free |
-| PR comments | **File+line+code+fix guide** | File+line | ❌ | ❌ |
-| Vibe coding optimized | **Domain-specific rules** | ❌ | ❌ | ❌ |
-| Secret scanning | ✅ | ✅ (paid) | ❌ | ❌ |
-| Merge blocking | ✅ `fail-on` | ✅ | ✅ | ❌ |
+| Setup time | **30 seconds** | 30min+ | 15min+ | Auto (deps only) |
+| Cost | **Free** | $35K+/yr | Free (public) | Free |
+| PR comments with fix guide | ✅ | Partial | ❌ | ❌ |
+| AI code patterns | ✅ | ❌ | ❌ | ❌ |
+| Merge blocking | ✅ | ✅ | ✅ | ❌ |
 
-Built for vibe coders. No security team needed — 24 lines is all it takes.
+But honestly — if you're reading this, you're probably not using any of these. That's the problem VibeSafe solves.
+
+</details>
 
 ### OWASP Juice Shop Benchmark
 
-[OWASP Juice Shop](https://github.com/juice-shop/juice-shop) is a deliberately vulnerable test application.
-
-| Metric | Result |
-|--------|--------|
-| Stack detected | Express + Socket.io (JS/TS/Python) |
-| SAST findings | 18 (High 7 + Medium 11) |
-| Exposed secrets | 18 (JWT tokens 9 + Supabase keys 9) |
-| **Total findings** | **36** |
-| **Score** | **0/100 Grade F** |
-
-Reproduce it yourself: `./test/benchmark_juiceshop.sh`
+We scanned [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (deliberately vulnerable app): **36 findings, 0/100 Grade F.** Reproduce: `./test/benchmark_juiceshop.sh`
 
 ---
 
