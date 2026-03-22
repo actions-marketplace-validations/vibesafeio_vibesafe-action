@@ -331,7 +331,7 @@
                         <div style="font-size:2rem; margin-bottom:8px;">Your app looks safe!</div>
                         <p style="color:#86efac;">We checked for ${checkedList} — nothing found.</p>
                         ${langs.length > 0 ? '<p style="color:#666; margin-top:8px; font-size:0.85rem;">Scanned: ' + langs.join(', ') + (detected.length > 0 ? ' (' + detected.join(', ') + ')' : '') + '</p>' : ''}
-                        <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this check on every code change? <a href="https://github.com/vibesafeio/vibesafe-action" style="color:#4ade80;">Add VibeSafe to your repo</a></p>
+                        <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this on every code change? <a href="#" onclick="window.open(getInstallUrl())" style="color:#4ade80;">Add VibeSafe to your repo (one click)</a></p>
                     </div>
                 `;
             }
@@ -371,6 +371,13 @@
                 });
             }
 
+            // Trust section
+            html += `
+                <div style="margin-top:24px; padding:16px; background:#111; border-radius:8px; font-size:0.85rem; color:#888;">
+                    <strong style="color:#aaa;">How we check:</strong> VibeSafe uses <a href="https://semgrep.dev" style="color:#4ade80;" target="_blank">Semgrep</a>, the same static analysis engine used by Snowflake, Dropbox, and Slack. We scan for <a href="https://owasp.org/www-project-top-ten/" style="color:#4ade80;" target="_blank">OWASP Top 10</a> vulnerabilities and <a href="https://www.w3.org/WAI/WCAG21/quickref/" style="color:#4ade80;" target="_blank">WCAG 2.1</a> accessibility standards — the same checklists that security auditors and ADA lawyers use.
+                </div>
+            `;
+
             // Light mode notice
             const scanMode = results.scan_mode || 'light';
             if (scanMode === 'light') {
@@ -378,7 +385,7 @@
                     <div style="text-align:center; padding:16px; margin-top:24px; background:#111; border-radius:8px; color:#666; font-size:0.85rem;">
                         This was a quick scan (AI code patterns + secrets + accessibility).
                         For a full scan (500+ rules, dependency CVEs, config checks),
-                        <a href="https://github.com/vibesafeio/vibesafe-action" style="color:#4ade80;">add VibeSafe to your repo</a>.
+                        <a href="#" onclick="window.open(getInstallUrl())" style="color:#4ade80;">add VibeSafe to your repo</a>.
                     </div>
                 `;
             }
@@ -448,6 +455,24 @@ jobs:
                 btn.textContent = 'Copied!';
                 setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 2000);
             });
+        }
+
+        function getInstallUrl() {
+            const repoUrl = document.getElementById('repoUrl').value.trim();
+            const match = repoUrl.match(/github\.com\/([^\/]+\/[^\/]+)/);
+            if (!match) return 'https://github.com/vibesafeio/vibesafe-action';
+            const yaml = `name: VibeSafe
+on: [pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vibesafeio/vibesafe-action@v0`;
+            return `https://github.com/${match[1]}/new/main?filename=.github/workflows/vibesafe.yml&value=${encodeURIComponent(yaml)}`;
         }
 
         // Enter key support
