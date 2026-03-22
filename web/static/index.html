@@ -317,10 +317,21 @@
             }
 
             if (findings.length === 0) {
+                const stack = results.stack || {};
+                const detected = stack.detected_stack || [];
+                const langs = stack.languages || [];
+                const domain = results.domain || 'auto';
+
+                let checkedList = 'SQL injection, XSS, hardcoded secrets, accessibility violations';
+                if (detected.length > 0) {
+                    checkedList += `, ${detected.join('/')} security patterns`;
+                }
+
                 html += `
                     <div style="text-align:center; padding:24px; background:#052e16; border:1px solid #166534; border-radius:12px; margin-bottom:24px;">
                         <div style="font-size:2rem; margin-bottom:8px;">Your app looks safe!</div>
-                        <p style="color:#86efac;">No security or accessibility issues found.</p>
+                        <p style="color:#86efac;">We checked for ${checkedList} — nothing found.</p>
+                        ${langs.length > 0 ? '<p style="color:#666; margin-top:8px; font-size:0.85rem;">Scanned: ' + langs.join(', ') + (detected.length > 0 ? ' (' + detected.join(', ') + ')' : '') + '</p>' : ''}
                         <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this check on every code change? <a href="https://github.com/vibesafeio/vibesafe-action" style="color:#4ade80;">Add VibeSafe to your repo</a></p>
                     </div>
                 `;
@@ -334,10 +345,11 @@
                     ).join('\\n');
 
                 html += `
-                    <div class="ai-prompt" style="margin-bottom:24px;">
-                        <h3>Copy this into Cursor, Claude, or ChatGPT to fix everything:</h3>
+                    <div class="ai-prompt" style="margin-bottom:24px; border-color:#4ade80;">
+                        <h3 style="color:#4ade80;">How to fix: copy this and paste into your AI</h3>
+                        <p style="color:#888; font-size:0.85rem; margin-bottom:8px;">Works with Cursor, Claude, ChatGPT, or any AI coding tool.</p>
                         <pre id="promptText">${prompt}</pre>
-                        <button class="copy-btn" onclick="copyPrompt()">Copy to clipboard</button>
+                        <button class="copy-btn" onclick="copyPrompt()" style="background:#4ade80; color:#000; font-weight:600;">Copy to clipboard</button>
                     </div>
                 `;
             }
