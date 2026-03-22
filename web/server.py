@@ -95,7 +95,8 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
             result = subprocess.run(
                 [sys.executable, str(PROJECT_DIR / "tools" / "cli_scanner.py"),
                  repo_url, "--json"],
-                capture_output=True, text=True, timeout=180,
+                capture_output=True, text=True, timeout=90,
+                env={**os.environ, "SEMGREP_MAX_MEMORY": "400"},
             )
             if result.returncode == 0:
                 scan_data = json.loads(result.stdout)
@@ -111,7 +112,7 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
                     "error": result.stdout[:500] or result.stderr[:500],
                 }
         except subprocess.TimeoutExpired:
-            SCANS[scan_id] = {"status": "error", "url": repo_url, "error": "Scan timed out (180s)"}
+            SCANS[scan_id] = {"status": "error", "url": repo_url, "error": "This repo is too large for our free scanner. Try a smaller repo, or install the GitHub Action for unlimited scanning."}
         except Exception as e:
             SCANS[scan_id] = {"status": "error", "url": repo_url, "error": str(e)}
 
