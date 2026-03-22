@@ -23,6 +23,24 @@ import shutil
 # In-memory scan results store
 SCANS: dict[str, dict] = {}
 
+# Analytics — simple counters (in-memory, resets on deploy)
+METRICS = {
+    "page_views": 0,
+    "scans_started": 0,
+    "scans_completed": 0,
+    "scans_failed": 0,
+    "fix_copies": 0,
+    "install_clicks": 0,
+}
+
+import datetime
+
+def log_event(event: str, detail: str = ""):
+    """Log analytics event to stdout (visible in Render logs)."""
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    METRICS[event] = METRICS.get(event, 0) + 1
+    print(f"[METRIC] {ts} {event} {detail}", flush=True)
+
 STATIC_DIR = Path(__file__).parent / "static"
 
 
@@ -40,8 +58,20 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
             self._json_response(SCANS[scan_id])
             return
 
+        if parsed.path == "/api/metrics":
+            self._json_response(METRICS)
+            return
+
+        if parsed.path == "/api/event":
+            event = parse_qs(parsed.query).get("e", [None])[0]
+            if event and event in ("fix_copies", "install_clicks"):
+                log_event(event)
+            self._json_response({"ok": True})
+            return
+
         # Serve static files
         if parsed.path == "/":
+            log_event("page_views")
             self._serve_file(STATIC_DIR / "index.html", "text/html")
         elif parsed.path.startswith("/static/"):
             file_path = STATIC_DIR / parsed.path[8:]
@@ -78,6 +108,7 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
 
             scan_id = str(uuid.uuid4())[:8]
             SCANS[scan_id] = {"status": "scanning", "url": repo_url}
+            log_event("scans_started", repo_url)
 
             # Run scan in background thread
             thread = threading.Thread(target=self._run_scan, args=(scan_id, repo_url))
@@ -105,12 +136,15 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
                     "url": repo_url,
                     "results": scan_data,
                 }
+                score = scan_data.get("score", {}).get("score", "?")
+                log_event("scans_completed", f"{repo_url} score={score}")
             else:
                 SCANS[scan_id] = {
                     "status": "error",
                     "url": repo_url,
                     "error": result.stdout[:500] or result.stderr[:500],
                 }
+                log_event("scans_failed", repo_url)
         except subprocess.TimeoutExpired:
             SCANS[scan_id] = {"status": "error", "url": repo_url, "error": "This repo is too large for our free scanner. Try a smaller repo, or install the GitHub Action for unlimited scanning."}
         except Exception as e:

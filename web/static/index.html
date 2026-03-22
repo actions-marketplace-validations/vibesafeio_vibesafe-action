@@ -331,7 +331,7 @@
                         <div style="font-size:2rem; margin-bottom:8px;">Your app looks safe!</div>
                         <p style="color:#86efac;">We checked for ${checkedList} — nothing found.</p>
                         ${langs.length > 0 ? '<p style="color:#666; margin-top:8px; font-size:0.85rem;">Scanned: ' + langs.join(', ') + (detected.length > 0 ? ' (' + detected.join(', ') + ')' : '') + '</p>' : ''}
-                        <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this on every code change? <a href="#" onclick="window.open(getInstallUrl())" style="color:#4ade80;">Add VibeSafe to your repo (one click)</a></p>
+                        <p style="color:#666; margin-top:12px; font-size:0.9rem;">Want this on every code change? <a href="#" onclick="trackInstall();window.open(getInstallUrl())" style="color:#4ade80;">Add VibeSafe to your repo (one click)</a></p>
                     </div>
                 `;
             }
@@ -385,7 +385,7 @@
                     <div style="text-align:center; padding:16px; margin-top:24px; background:#111; border-radius:8px; color:#666; font-size:0.85rem;">
                         This was a quick scan (AI code patterns + secrets + accessibility).
                         For a full scan (500+ rules, dependency CVEs, config checks),
-                        <a href="#" onclick="window.open(getInstallUrl())" style="color:#4ade80;">add VibeSafe to your repo</a>.
+                        <a href="#" onclick="trackInstall();window.open(getInstallUrl())" style="color:#4ade80;">add VibeSafe to your repo</a>.
                     </div>
                 `;
             }
@@ -454,8 +454,11 @@ jobs:
                 const btn = document.querySelector('.copy-btn');
                 btn.textContent = 'Copied!';
                 setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 2000);
+                fetch('/api/event?e=fix_copies');
             });
         }
+
+        function trackInstall() { fetch('/api/event?e=install_clicks'); }
 
         function getInstallUrl() {
             const repoUrl = document.getElementById('repoUrl').value.trim();
