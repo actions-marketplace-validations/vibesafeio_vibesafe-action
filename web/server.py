@@ -94,7 +94,7 @@ class VibeSafeHandler(SimpleHTTPRequestHandler):
         try:
             result = subprocess.run(
                 [sys.executable, str(PROJECT_DIR / "tools" / "cli_scanner.py"),
-                 repo_url, "--json"],
+                 repo_url, "--json", "--light"],
                 capture_output=True, text=True, timeout=90,
                 env={**os.environ, "SEMGREP_MAX_MEMORY": "400"},
             )

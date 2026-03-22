@@ -40,7 +40,7 @@ def clone_repo(url: str, dest: Path) -> bool:
         return False
 
 
-def run_scan(source_path: Path) -> dict:
+def run_scan(source_path: Path, light: bool = False) -> dict:
     """Run full VibeSafe scan pipeline on a path."""
     results = {
         "path": str(source_path),
@@ -81,26 +81,33 @@ def run_scan(source_path: Path) -> dict:
             results["domain"] = "platform"
 
         # 3. Ruleset selection
-        stack = ",".join(results["stack"].get("detected_stack", []))
-        langs = ",".join(results["stack"].get("languages", []))
-        try:
-            r = subprocess.run(
-                [sys.executable, str(SCRIPT_DIR / "scanner" / "domain_rule_engine.py"),
-                 "--domain", results["domain"], "--stack", stack, "--languages", langs],
-                capture_output=True, text=True, timeout=30,
-            )
-            if r.returncode == 0:
-                ruleset = json.loads(r.stdout)
-                rules = ",".join(ruleset.get("semgrep_configs", ["p/owasp-top-ten"]))
-            else:
-                rules = "p/owasp-top-ten"
-        except Exception:
-            rules = "p/owasp-top-ten"
-
-        # Add vibe-coding rules if available
         vibe_rules = PROJECT_DIR / "rules" / "vibe-coding.yml"
-        if vibe_rules.exists():
-            rules += f",{vibe_rules}"
+
+        if light:
+            # Light mode: custom rules only (fast, low memory)
+            rules = str(vibe_rules) if vibe_rules.exists() else "p/owasp-top-ten"
+            results["scan_mode"] = "light"
+        else:
+            # Full mode: domain packs + custom rules
+            stack = ",".join(results["stack"].get("detected_stack", []))
+            langs = ",".join(results["stack"].get("languages", []))
+            try:
+                r = subprocess.run(
+                    [sys.executable, str(SCRIPT_DIR / "scanner" / "domain_rule_engine.py"),
+                     "--domain", results["domain"], "--stack", stack, "--languages", langs],
+                    capture_output=True, text=True, timeout=30,
+                )
+                if r.returncode == 0:
+                    ruleset = json.loads(r.stdout)
+                    rules = ",".join(ruleset.get("semgrep_configs", ["p/owasp-top-ten"]))
+                else:
+                    rules = "p/owasp-top-ten"
+            except Exception:
+                rules = "p/owasp-top-ten"
+
+            if vibe_rules.exists():
+                rules += f",{vibe_rules}"
+            results["scan_mode"] = "full"
 
         # 4. SAST scan
         sarif_path = tmp_path / "sast.sarif"
@@ -160,6 +167,39 @@ def run_scan(source_path: Path) -> dict:
                 results["score"] = json.loads(r.stdout)
         except Exception:
             pass
+
+        # Fallback scoring if score_calculator failed or returned empty
+        if not results["score"]:
+            total = 0
+            high_count = 0
+            medium_count = 0
+            critical_count = 0
+            if sarif_path.exists():
+                sarif_data = json.loads(sarif_path.read_text())
+                for run in sarif_data.get("runs", []):
+                    for r in run.get("results", []):
+                        total += 1
+                        level = r.get("level", "warning")
+                        if level == "error":
+                            high_count += 1
+                        elif level == "warning":
+                            medium_count += 1
+            if secrets_path.exists():
+                sec = json.loads(secrets_path.read_text())
+                critical_count = len(sec.get("secrets", []))
+                total += critical_count
+
+            score = max(0, 100 - (critical_count * 20) - (high_count * 10) - (medium_count * 4))
+            grade = "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 50 else "D" if score >= 25 else "F"
+            results["score"] = {
+                "score": score,
+                "grade": grade,
+                "critical": critical_count,
+                "high": high_count,
+                "medium": medium_count,
+                "low": 0,
+                "total_vulnerabilities": total,
+            }
 
         # Load detailed findings for display
         if secrets_path.exists():
@@ -265,6 +305,7 @@ def main():
     )
     parser.add_argument("target", help="GitHub URL (https://github.com/user/repo) or local path")
     parser.add_argument("--json", action="store_true", help="Output raw JSON instead of formatted results")
+    parser.add_argument("--light", action="store_true", help="Light scan — custom rules only, skip heavy Semgrep packs")
     args = parser.parse_args()
 
     target = args.target
@@ -295,7 +336,7 @@ def main():
     try:
         if not args.json:
             print(f"  Scanning...")
-        results = run_scan(scan_path)
+        results = run_scan(scan_path, light=args.light)
 
         if args.json:
             print(json.dumps(results, indent=2))
