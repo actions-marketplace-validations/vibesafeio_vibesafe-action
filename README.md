@@ -142,25 +142,8 @@ PR opened
 
 </details>
 
-## 🤖 AI Fix Prompt — the feature vibe coders actually need
-
-Other scanners say "you have 10 vulnerabilities." VibeSafe says **"paste this into Cursor and they're all fixed."**
-
-Every PR comment includes a collapsible **"Fix with AI"** section:
-
-```
-Fix these security issues in my code:
-- CRITICAL: config.py:5 — Store API key in .env: os.environ.get('OPENAI_API_KEY')
-- HIGH: app.py:24 — Use parameterized queries: cursor.execute("SELECT ... WHERE id = ?", (param,))
-- HIGH: app.py:67 — Remove shell=True: subprocess.run(shlex.split(cmd))
-
-Move all hardcoded secrets to environment variables.
-Generate a .env.example with placeholder values.
-```
-
-Copy. Paste into your AI. Done. **You don't fix code — your AI does. VibeSafe tells it what to fix.**
-
----
+<details>
+<summary>Advanced: GitHub Action options (domain, custom rules, merge blocking, etc.)</summary>
 
 ## Domain Options
 
@@ -327,6 +310,8 @@ claude mcp add vibesafe -- python /path/to/vibesafe/tools/mcp_server.py
 ```
 
 Tools: `vibesafe_check_secret` (text scan) and `vibesafe_scan_file` (file scan with fix suggestions).
+
+</details>
 
 ---
 
