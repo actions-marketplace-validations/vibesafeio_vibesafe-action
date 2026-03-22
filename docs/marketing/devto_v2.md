@@ -67,6 +67,8 @@ I want to be honest about this:
 
 I'm not a security expert. That's exactly why I needed this. If you're vibe coding and shipping without a second look at what the AI wrote, you might want to at least know what's in there.
 
+**Try it now:** https://vibesafe.onrender.com — paste your GitHub URL, get results in 30 seconds.
+
 Repo: https://github.com/vibesafeio/vibesafe-action
 
 It's free, open source, no account needed. If you try it and it catches something weird, I'd genuinely like to hear about it.

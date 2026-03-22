@@ -1,53 +1,57 @@
-# VibeSafe — Safety Scanner for Vibe-Coded Apps
+# VibeSafe
 
-> AI writes code that works. It doesn't write code that's safe. [53% of AI-generated code has security vulnerabilities.](https://www.getautonoma.com/blog/vibe-coding-security-risks) [4,000+ ADA accessibility lawsuits filed in 2024.](https://www.audioeye.com/post/website-accessibility-in-2025/)
+**You built an app with AI. Is it safe to ship?**
 
-VibeSafe scans every PR for security vulnerabilities, accessibility violations, hardcoded secrets, and 500+ patterns. It tells you the exact file, line, and how to fix it.
+[53% of AI-generated code has security vulnerabilities.](https://www.getautonoma.com/blog/vibe-coding-security-risks) [4,000+ accessibility lawsuits filed in 2024 alone.](https://www.audioeye.com/post/website-accessibility-in-2025/) Your AI doesn't check for any of this. VibeSafe does.
 
-![VibeSafe PR Comment](./docs/screenshot-vuln.png)
+## **[Scan your app now →](https://vibesafe.onrender.com)**
 
-**Free. Open source. 30-second setup.**
+Paste your GitHub URL. Get your safety score in 30 seconds. We'll tell you exactly what's wrong and give you a prompt to paste into your AI to fix everything.
 
-[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-vibesafe--action-blue?logo=github)](https://github.com/vibesafeio/vibesafe-action)
+**No signup. No install. Free.**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## Who this is for
+## How it works
 
-The moment you add a signup form, accept payments, or store user data — **that data is your responsibility.** If it leaks, there's no one else to blame. If your app isn't accessible, [64% of ADA lawsuits target businesses under $25M revenue](https://www.ecomback.com/ada-website-lawsuits-recap-report/2025-mid-year-ada-website-lawsuit-report).
+1. **Paste** your GitHub repo URL
+2. **30 seconds later** — safety score + every issue found
+3. **Copy the AI Fix Prompt** → paste into Cursor, Claude, or ChatGPT
+4. Your AI fixes everything. You ship safe.
 
-VibeSafe is for developers who ship fast and need a safety net that doesn't slow them down.
-
-## Try it now (no install needed)
-
-Scan any GitHub repo instantly:
-
-```bash
-git clone https://github.com/vibesafeio/vibesafe-action.git
-python3 vibesafe-action/tools/cli_scanner.py https://github.com/YOUR/REPO
-```
-
-Get your score in 30 seconds. No signup, no API key, no config.
-
-**Want this on every PR — automatically?** Keep reading. ↓
+That's it. You don't need to understand the issues. Your AI does.
 
 ---
 
-## See it work
+## What it catches
 
-1. Copy the YAML below → open a PR
-2. 20 seconds later, this comment appears:
+| What AI gets wrong | Why it matters |
+|---|---|
+| Hardcoded API keys in your code | Anyone can find them and use your paid services |
+| SQL injection, XSS, command injection | Attackers can steal your users' data |
+| `<img>` without alt, inputs without labels | [64% of ADA lawsuits target small businesses](https://www.ecomback.com/ada-website-lawsuits-recap-report/2025-mid-year-ada-website-lawsuit-report) |
+| Supabase without Row Level Security | All your database rows are public by default |
+| Flask/Django debug mode in production | Gives attackers a code execution backdoor |
 
-![VibeSafe PR Comment](./docs/screenshot-vuln.png)
-
-3. Expand **"Fix with AI"** → copy the prompt → paste into Cursor
-4. Your AI fixes everything
-5. Push again → **100/100 Grade A ✅ Certified**
+We scanned 10 open-source apps built with Lovable, Bolt, and Cursor. **8 out of 10 had issues.**
 
 ---
 
-## Install (30 seconds)
+## What happens if you don't scan
+
+These are real incidents from vibe-coded apps:
+
+- **[Moltbook](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — 1.5 million auth tokens + 35,000 emails exposed
+- **[Lovable app](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — 18,000 users' data leaked through misconfigured Supabase
+- **[Escape research](https://escape.tech/blog/methodology-how-we-discovered-vulnerabilities-apps-built-with-vibe-coding/)** — 5,600 vibe-coded apps → 2,000+ vulnerabilities, 400+ exposed secrets
+
+---
+
+## Want this on every PR? (optional)
+
+If you use GitHub for your code, you can add VibeSafe as an automatic check.
 
 Copy this file to `.github/workflows/vibesafe-scan.yml`:
 
@@ -80,6 +84,9 @@ jobs:
 PR comments are posted automatically. No extra configuration needed.
 
 ---
+
+<details>
+<summary>How it works (technical details)</summary>
 
 ## How it works
 
@@ -123,51 +130,17 @@ PR opened
 └─────────────────────────────────────────────┘
 ```
 
----
-
-## What happens if you don't scan
-
-These are real incidents from vibe-coded apps:
-
-- **[Moltbook](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — 1.5 million auth tokens + 35,000 emails exposed. The app worked perfectly. The security didn't.
-- **[Lovable app](https://www.theregister.com/2026/02/27/lovable_app_vulnerabilities/)** — One app leaked 18,000 users' data through misconfigured Supabase RLS.
-- **[Escape research](https://escape.tech/blog/methodology-how-we-discovered-vulnerabilities-apps-built-with-vibe-coding/)** — 5,600 vibe-coded apps scanned → 2,000+ vulnerabilities, 400+ exposed secrets, 175 PII leaks.
-
-Your app might be next. Or it might be fine. **The only way to know is to scan it.**
-
-<details>
-<summary>How does VibeSafe compare to other tools?</summary>
-
-| | VibeSafe | Snyk | CodeQL | Dependabot |
-|---|---|---|---|---|
-| Setup time | **30 seconds** | 30min+ | 15min+ | Auto (deps only) |
-| Cost | **Free** | $35K+/yr | Free (public) | Free |
-| PR comments with fix guide | ✅ | Partial | ❌ | ❌ |
-| AI code patterns | ✅ | ❌ | ❌ | ❌ |
-| Merge blocking | ✅ | ✅ | ✅ | ❌ |
-
-But honestly — if you're reading this, you're probably not using any of these. That's the problem VibeSafe solves.
-
-</details>
-
-### OWASP Juice Shop Benchmark
-
-We scanned [OWASP Juice Shop](https://github.com/juice-shop/juice-shop) (deliberately vulnerable app): **36 findings, 0/100 Grade F.** Reproduce: `./test/benchmark_juiceshop.sh`
-
----
-
 ## What It Scans
 
 | Layer | What AI gets wrong | VibeSafe catches |
 |-------|-------------------|------------------|
-| **Code** | `eval()`, f-string SQL, `shell=True`, XSS | SAST — OWASP Top 10 + 6 vibe-coding rules |
-| **Secrets** | Hardcoded API keys, tokens in frontend | 15 secret patterns + `.env.example` generation |
-| **Config** | Supabase without RLS, Firebase test mode | Config scanner — checks DB security policies |
-| **Dependencies** | Unpinned versions, known CVEs | SCA — pip-audit + npm audit |
-| **Headers** | Missing CORS, CSRF, Helmet | Custom rules for Express/Flask/Next.js |
-| **Accessibility** | `<img>` without alt, `<input>` without label, `<html>` without lang | 3 WCAG 2.1 Level A rules |
+| **Code** | `eval()`, f-string SQL, `shell=True`, XSS | SAST — OWASP Top 10 + custom rules |
+| **Secrets** | Hardcoded API keys, tokens in frontend | 15 secret patterns |
+| **Config** | Supabase without RLS, Firebase test mode | Config scanner |
+| **Dependencies** | Known CVEs | SCA — pip-audit + npm audit |
+| **Accessibility** | `<img>` without alt, `<input>` without label | WCAG 2.1 Level A rules |
 
-Supported languages: JavaScript · TypeScript · Python · Java · Go · Ruby · PHP · Kotlin
+</details>
 
 ## 🤖 AI Fix Prompt — the feature vibe coders actually need
 
@@ -359,15 +332,20 @@ Tools: `vibesafe_check_secret` (text scan) and `vibesafe_scan_file` (file scan w
 
 ## FAQ
 
-**Does my code leave my environment?**
-No. All scanning runs inside the GitHub Actions runner. No code is sent to VibeSafe servers.
+**Is my code safe with you?**
+The web scanner clones your repo, scans it, and deletes it immediately. Nothing is stored. The GitHub Action runs entirely inside GitHub's own servers.
 
-**How much does it cost?**
-Free. Only consumes GitHub Actions minutes (~20 seconds per scan). Public repos have unlimited free minutes.
+**Does it cost money?**
+No. Free forever. Open source.
 
-**What languages are supported?**
-All languages supported by Semgrep — JavaScript/TypeScript, Python, Java, Go, Ruby, PHP, Kotlin, and more.
+**Do I need to know coding?**
+No. Paste your GitHub URL, get results, copy the fix prompt into your AI. That's it.
+
+**What languages does it support?**
+JavaScript, TypeScript, Python, Java, Go, Ruby, PHP, Kotlin, and more.
 
 ---
 
-<sub>Powered by [VibeSafe](https://vibesafe.dev) · Built with [Semgrep](https://semgrep.dev)</sub>
+**[Scan your app now →](https://vibesafe.onrender.com)**
+
+<sub>Open source · Built with [Semgrep](https://semgrep.dev)</sub>
