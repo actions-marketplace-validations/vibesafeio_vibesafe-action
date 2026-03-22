@@ -142,20 +142,15 @@
 
         .scanning {
             text-align: center;
-            padding: 40px;
+            padding: 20px;
             color: #888;
         }
-        .scanning .spinner {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid #333;
-            border-top: 3px solid #4ade80;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 12px;
+        .scanning canvas {
+            image-rendering: pixelated;
+            margin-bottom: 8px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .scan-dots { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+        .scan-dot { width: 6px; height: 6px; background: #333; }
 
         .stats {
             margin-top: 40px;
@@ -182,9 +177,10 @@
         <p class="hint">Public GitHub repos only. Your code stays on our server only during the scan.</p>
 
         <div id="scanning" class="scanning" style="display:none">
-            <div class="spinner"></div>
-            <p id="scanStatus">Downloading your code...</p>
-            <p style="color:#555; font-size:0.8rem; margin-top:8px;">Usually takes 20-40 seconds</p>
+            <canvas id="wombatCanvas" width="360" height="160"></canvas>
+            <div class="scan-dots" id="scanDots"></div>
+            <p id="scanStatus" style="font-family:monospace; letter-spacing:1px; margin-top:10px;">Digging for vulnerabilities...</p>
+            <p style="color:#555; font-size:0.75rem; margin-top:4px;">Usually takes 20-40 seconds</p>
         </div>
 
         <div id="results"></div>
@@ -213,6 +209,7 @@
             document.getElementById('scanBtn').disabled = true;
             document.getElementById('scanning').style.display = 'block';
             document.getElementById('results').style.display = 'none';
+            startWombat();
 
             try {
                 const res = await fetch('/api/scan', {
@@ -263,6 +260,7 @@
         }
 
         function showResults(results) {
+            stopWombat();
             document.getElementById('scanning').style.display = 'none';
             document.getElementById('scanBtn').disabled = false;
 
@@ -390,6 +388,7 @@
         }
 
         function showError(msg) {
+            stopWombat();
             document.getElementById('scanning').style.display = 'none';
             document.getElementById('scanBtn').disabled = false;
 
@@ -455,6 +454,71 @@ jobs:
         document.getElementById('repoUrl').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') startScan();
         });
+
+        // Wombat burrow loading animation
+        let wombatAnim = null;
+        function startWombat() {
+            const cv = document.getElementById('wombatCanvas');
+            if (!cv) return;
+            const cx = cv.getContext('2d');
+            const S = 8;
+            const col = {
+                o:'#9B7B5E',m:'#B8967A',l:'#C9A88C',ll:'#D4B89A',
+                dk:'#7A6347',vdk:'#5C4A36',eye:'#2C2216',nose:'#4A3C2E',
+                grs:'#5D8035',grd:'#4A6B2A',dirt:'#3D3225',bg:'#0a0a0a'
+            };
+            function px(x,y,c){cx.fillStyle=c;cx.fillRect(x*S,y*S,S,S);}
+            function ground(hX,hW,ph){
+                for(let x=0;x<45;x++){
+                    const h=x>=hX&&x<hX+hW;
+                    px(x,14,(x%2==0)?col.grs:col.grd);
+                    if(!h)px(x,15,(x%2==0)?col.grd:col.grs);
+                    for(let y=16;y<20;y++){if(!h||y>16+ph)px(x,y,col.dirt);}
+                }
+            }
+            function wombat(bx,by){
+                const w=[[0,0,col.o],[1,0,col.o],[4,0,col.o],[5,0,col.o],
+                [0,1,col.m],[1,1,col.l],[2,1,col.o],[3,1,col.o],[4,1,col.l],[5,1,col.m],
+                [0,2,col.m],[1,2,col.l],[2,2,col.l],[3,2,col.l],[4,2,col.l],[5,2,col.m],[6,2,col.o],
+                [0,3,col.o],[1,3,col.eye],[2,3,col.l],[3,3,col.l],[4,3,col.eye],[5,3,col.l],[6,3,col.m],[7,3,col.o],
+                [0,4,col.m],[1,4,col.l],[2,4,col.nose],[3,4,col.nose],[4,4,col.l],[5,4,col.l],[6,4,col.m],[7,4,col.m],[8,4,col.o],
+                [0,5,col.m],[1,5,col.l],[2,5,col.l],[3,5,col.l],[4,5,col.ll],[5,5,col.ll],[6,5,col.l],[7,5,col.m],[8,5,col.m],[9,5,col.o],
+                [0,6,col.o],[1,6,col.m],[2,6,col.l],[3,6,col.ll],[4,6,col.ll],[5,6,col.ll],[6,6,col.ll],[7,6,col.l],[8,6,col.m],[9,6,col.m],[10,6,col.o],
+                [0,7,col.o],[1,7,col.m],[2,7,col.m],[3,7,col.l],[4,7,col.ll],[5,7,col.ll],[6,7,col.l],[7,7,col.m],[8,7,col.m],[9,7,col.o],[10,7,col.o],
+                [1,8,col.o],[2,8,col.o],[3,8,col.m],[4,8,col.m],[5,8,col.m],[6,8,col.m],[7,8,col.o],[8,8,col.o],
+                [1,9,col.dk],[2,9,col.dk],[3,9,col.o],[4,9,col.o],[6,9,col.dk],[7,9,col.dk],
+                [1,10,col.vdk],[2,10,col.vdk],[3,10,col.dk],[4,10,col.dk],[6,10,col.vdk],[7,10,col.vdk]];
+                for(const p of w) px(bx+p[0],by+p[1],p[2]);
+            }
+            let bits=[], phase=0, wy=3, timer=0;
+            function spawn(ox){
+                for(let i=0;i<3;i++) bits.push({x:ox+Math.random()*4-2,y:12+Math.random()*2,vx:(Math.random()-0.5)*2,vy:-Math.random()*3-1,life:15+Math.floor(Math.random()*10),c:Math.random()>0.5?col.dk:col.o});
+            }
+            function draw(){
+                cx.fillStyle=col.bg;cx.fillRect(0,0,360,160);
+                ground(16,6,Math.min(phase,3));
+                wombat(15,wy);
+                for(let i=bits.length-1;i>=0;i--){
+                    const d=bits[i];d.x+=d.vx;d.y+=d.vy;d.vy+=0.3;d.life--;
+                    if(d.life>0&&d.y<20){cx.fillStyle=d.c;cx.fillRect(d.x*S,d.y*S,S*0.6,S*0.6);}
+                    else bits.splice(i,1);
+                }
+                timer++;
+                if(timer%8==0&&wy<10){wy+=0.5;phase=Math.min(phase+0.5,4);spawn(20);}
+                if(wy>=10){wy=3;phase=0;}
+                wombatAnim=requestAnimationFrame(draw);
+            }
+            draw();
+            // Progress dots
+            const dotsEl=document.getElementById('scanDots');
+            dotsEl.innerHTML='';
+            for(let i=0;i<5;i++){const d=document.createElement('div');d.className='scan-dot';d.id='sdot'+i;dotsEl.appendChild(d);}
+            let di=0;
+            wombatAnim._dotInterval=setInterval(()=>{for(let i=0;i<5;i++)document.getElementById('sdot'+i).style.background=i<=di?col.m:'#333';di=(di+1)%6;},300);
+        }
+        function stopWombat() {
+            if(wombatAnim){cancelAnimationFrame(wombatAnim);if(wombatAnim._dotInterval)clearInterval(wombatAnim._dotInterval);wombatAnim=null;}
+        }
     </script>
 </body>
 </html>

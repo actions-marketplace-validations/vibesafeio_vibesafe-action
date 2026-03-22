@@ -77,23 +77,10 @@ rules:
       technology: [express]
       vibesafe-fix: "Install helmet: npm i helmet, then add app.use(helmet()) before routes"
 
-  - id: vibesafe.password-comparison-timing-py
-    patterns:
-      - pattern-either:
-          - pattern: |
-              if $PASSWORD == $INPUT: ...
-          - pattern: |
-              if $INPUT == $PASSWORD: ...
-    message: >
-      Password compared using ==. This is vulnerable to timing attacks.
-      Use a constant-time comparison function instead.
-    languages: [python]
-    severity: WARNING
-    metadata:
-      category: security
-      subcategory: [vuln]
-      cwe: "CWE-208: Observable Timing Discrepancy"
-      vibesafe-fix: "Use hmac.compare_digest(password_hash, input_hash)"
+  # DISABLED: password-comparison-timing-py catches ALL == comparisons in
+  # if statements, not just password comparisons. ~99% FP rate.
+  # Re-enable when pattern can be narrowed to password/hash/secret variables.
+  # - id: vibesafe.password-comparison-timing-py
 
   # DISABLED: password-comparison-timing-js catches ALL === comparisons, not just
   # password comparisons. FP rate ~99%. Re-enable when pattern can be narrowed to
