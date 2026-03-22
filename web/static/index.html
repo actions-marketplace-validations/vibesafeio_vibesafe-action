@@ -340,10 +340,10 @@
 
             // AI Fix Prompt FIRST — this is what beginners need most
             if (findings.length > 0) {
-                const prompt = 'Fix these security and accessibility issues in my code:\\n' +
+                const prompt = 'Fix these security and accessibility issues in my code:\n' +
                     findings.slice(0, 20).map(f =>
                         `- ${(f.severity || 'MEDIUM').toUpperCase()}: ${f.file || ''}${f.line ? ':' + f.line : ''} — ${f.message || f.rule_id || ''}`
-                    ).join('\\n');
+                    ).join('\n');
 
                 html += `
                     <div class="ai-prompt" style="margin-bottom:24px; border-color:#4ade80;">
